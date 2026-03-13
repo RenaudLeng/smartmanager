@@ -10,7 +10,6 @@ import {
   Settings, 
   LogOut,
   Store,
-  BarChart,
   Building2,
   Shield,
   ShoppingCart,
@@ -70,12 +69,6 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
       name: 'Rapports',
       href: '/rapports',
       icon: TrendingUp,
-      roles: ['super_admin', 'admin', 'manager']
-    },
-    {
-      name: 'Rapports avancés',
-      href: '/rapports-avances',
-      icon: BarChart,
       roles: ['super_admin', 'admin', 'manager']
     },
     {
@@ -141,9 +134,8 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === href
-    // For routes like /rapports and /rapports-avances, check exact match or proper path matching
+    // For routes like /rapports, check exact match or proper path matching
     if (href === '/rapports') return pathname === href || pathname.startsWith('/rapports?')
-    if (href === '/rapports-avances') return pathname === href
     return pathname.startsWith(href)
   }
 

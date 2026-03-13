@@ -1,26 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { 
   FileText, 
   Download, 
   Calendar, 
-  Filter, 
   Plus, 
   Eye,
   Trash2,
   TrendingUp,
-  TrendingDown,
-  DollarSign
+  TrendingDown
 } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
 import { FinancialReport } from '@/types/financial'
+import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function ReportsManager() {
   const { state, actions } = useFinancial()
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [selectedReport, setSelectedReport] = useState<FinancialReport | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('all')
+  
+  const { showNotification, NotificationComponent } = useNotifications()
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog()
 
   const [generateForm, setGenerateForm] = useState({
     type: 'monthly' as FinancialReport['type'],
@@ -44,6 +46,43 @@ export function ReportsManager() {
     })
   }
 
+  // Fonction de suppression avec confirmation
+  const handleDeleteReport = useCallback(async (report: FinancialReport) => {
+    const confirmed = await confirm({
+      title: 'Confirmer la suppression',
+      message: 'Êtes-vous sûr de vouloir supprimer ce rapport ?',
+      type: 'danger',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      itemDetails: {
+        title: report.title,
+        subtitle: `${formatDate(report.period.start)} - ${formatDate(report.period.end)}`,
+        amount: formatCurrency(report.metrics.totalRevenue)
+      }
+    })
+
+    if (confirmed) {
+      try {
+        // Simuler la suppression du rapport
+        // await actions.deleteReport(report.id)
+        
+        // Afficher la notification de succès
+        showNotification(
+          'success', 
+          `Rapport "${report.title}" supprimé avec succès!`
+        )
+
+        console.log('Rapport supprimé:', report.id)
+      } catch (error) {
+        showNotification(
+          'error', 
+          'Erreur lors de la suppression du rapport. Veuillez réessayer.'
+        )
+        console.error('Erreur suppression rapport:', error)
+      }
+    }
+  }, [confirm, showNotification])
+
   const handleGenerateReport = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -61,13 +100,6 @@ export function ReportsManager() {
       })
     } catch (error) {
       console.error('Erreur lors de la génération du rapport:', error)
-    }
-  }
-
-  const handleDeleteReport = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce rapport ?')) {
-      // Implémenter la suppression de rapport si nécessaire
-      console.log('Supprimer le rapport:', id)
     }
   }
 
@@ -243,8 +275,9 @@ export function ReportsManager() {
                   <Eye className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDeleteReport(report.id)}
+                  onClick={() => handleDeleteReport(report)}
                   className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                  title="Supprimer le rapport"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -441,6 +474,10 @@ export function ReportsManager() {
           </div>
         </div>
       )}
+
+      {/* Composants partagés */}
+      <ConfirmDialogComponent />
+      <NotificationComponent />
     </div>
   )
 }

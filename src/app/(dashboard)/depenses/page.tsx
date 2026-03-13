@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, DollarSign, TrendingDown, Calendar, Filter, Edit, Trash2, Grid, List } from 'lucide-react'
+import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface Expense {
   id: string
@@ -21,11 +22,12 @@ export default function DepensesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  
+  const { showNotification, NotificationComponent } = useNotifications()
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog()
 
   const categories = [
     { value: 'all', label: 'Toutes catégories' },
@@ -164,11 +166,41 @@ export default function DepensesPage() {
     }
   }
 
-  const handleDelete = (expenseId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) {
-      setExpenses(expenses.filter(expense => expense.id !== expenseId))
+  const handleDeleteExpense = useCallback(async (expense: Expense) => {
+    const confirmed = await confirm({
+      title: 'Confirmer la suppression',
+      message: 'Êtes-vous sûr de vouloir supprimer cette dépense ?',
+      type: 'danger',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      itemDetails: {
+        title: expense.description,
+        subtitle: `${expense.category} • ${expense.date}`,
+        amount: `${expense.amount.toLocaleString('fr-GA')} XAF`
+      }
+    })
+
+    if (confirmed) {
+      try {
+        // Simuler la suppression de la dépense
+        setExpenses(prev => prev.filter(e => e.id !== expense.id))
+        
+        // Afficher la notification de succès
+        showNotification(
+          'success', 
+          `Dépense "${expense.description}" supprimée avec succès!`
+        )
+
+        console.log('Dépense supprimée:', expense.id)
+      } catch (error) {
+        showNotification(
+          'error', 
+          'Erreur lors de la suppression de la dépense. Veuillez réessayer.'
+        )
+        console.error('Erreur suppression dépense:', error)
+      }
     }
-  }
+  }, [confirm, showNotification])
 
   const getTotalExpenses = () => {
     return expenses.reduce((total, expense) => total + expense.amount, 0)
@@ -304,7 +336,7 @@ export default function DepensesPage() {
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(expense.id)}
+                      onClick={() => handleDeleteExpense(expense)}
                       className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -371,7 +403,7 @@ export default function DepensesPage() {
                           <Edit className="h-3 w-3" />
                         </button>
                         <button
-                          onClick={() => handleDelete(expense.id)}
+                          onClick={() => handleDeleteExpense(expense)}
                           className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"
                           title="Supprimer"
                         >
@@ -486,6 +518,12 @@ export default function DepensesPage() {
           </div>
         </div>
       )}
+
+      {/* Composants partagés */}
+      <>
+        <ConfirmDialogComponent />
+        <NotificationComponent />
+      </>
     </div>
   )
 }

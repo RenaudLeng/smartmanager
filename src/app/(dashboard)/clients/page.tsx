@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Search, Plus, Users, Grid, List, Mail, Phone, Edit, Trash2, Eye, TrendingUp, ArrowLeft, X, MapPin } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, Users, Grid, List, Mail, Phone, Edit, Trash2, TrendingUp, ArrowLeft, MapPin, X } from 'lucide-react'
+import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface Customer {
   id: string
@@ -24,6 +25,46 @@ export default function ClientsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  
+  const { showNotification, NotificationComponent } = useNotifications()
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog()
+
+  // Fonction de suppression avec confirmation
+  const handleDeleteCustomer = useCallback(async (customer: Customer) => {
+    const confirmed = await confirm({
+      title: 'Confirmer la suppression',
+      message: 'Êtes-vous sûr de vouloir supprimer ce client ?',
+      type: 'danger',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      itemDetails: {
+        title: customer.name,
+        subtitle: `${customer.email} • ${customer.phone}`,
+        amount: `${customer.totalPurchases.toLocaleString('fr-GA')} XAF d'achats`
+      }
+    })
+
+    if (confirmed) {
+      try {
+        // Simuler la suppression du client
+        setCustomers(prev => prev.filter(c => c.id !== customer.id))
+        
+        // Afficher la notification de succès
+        showNotification(
+          'success', 
+          `Client "${customer.name}" supprimé avec succès!`
+        )
+
+        console.log('Client supprimé:', customer.id)
+      } catch (error) {
+        showNotification(
+          'error', 
+          'Erreur lors de la suppression du client. Veuillez réessayer.'
+        )
+        console.error('Erreur suppression client:', error)
+      }
+    }
+  }, [confirm, showNotification])
 
   useEffect(() => {
     setTimeout(() => {
@@ -157,6 +198,7 @@ export default function ClientsPage() {
   }
 
   return (
+    <>
       <div className="p-4">
         {/* Header Mobile-First */}
         <div className="mb-6">
@@ -291,7 +333,7 @@ export default function ClientsPage() {
                       title="Supprimer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // handleDelete(customer.id)
+                        handleDeleteCustomer(customer)
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -401,7 +443,7 @@ export default function ClientsPage() {
                             title="Supprimer"
                             onClick={(e) => {
                               e.stopPropagation()
-                              // handleDelete(customer.id)
+                              handleDeleteCustomer(customer)
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -514,5 +556,12 @@ export default function ClientsPage() {
           </button>
         </div>
       </div>
+
+      {/* Composants partagés */}
+      <>
+        <ConfirmDialogComponent />
+        <NotificationComponent />
+      </>
+    </>
   )
 }

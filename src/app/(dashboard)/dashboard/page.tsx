@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, AlertTriangle, Wallet, ArrowUp, ArrowDown } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, AlertTriangle, Wallet, ArrowUp, ArrowDown, Plus, Package, Calculator, BarChart3, Settings } from 'lucide-react'
 import { SmartAlerts } from '@/components/Notifications/SmartAlerts'
+import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface DashboardStats {
   todaySales: number
@@ -135,8 +137,22 @@ function LowStockAlert({ products }: { products: DashboardStats['topProducts'] }
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  const { showNotification, NotificationComponent } = useNotifications()
+  const { ConfirmDialogComponent } = useConfirmDialog()
+
+  // Actions rapides
+  const quickActions = [
+    { icon: <Plus className="h-5 w-5" />, label: 'POS', action: () => router.push('/pos'), color: 'bg-green-500 hover:bg-green-600' },
+    { icon: <Package className="h-5 w-5" />, label: 'Stock', action: () => router.push('/stock'), color: 'bg-blue-500 hover:bg-blue-600' },
+    { icon: <Users className="h-5 w-5" />, label: 'Clients', action: () => router.push('/clients'), color: 'bg-purple-500 hover:bg-purple-600' },
+    { icon: <Calculator className="h-5 w-5" />, label: 'Dépenses', action: () => router.push('/depenses'), color: 'bg-red-500 hover:bg-red-600' },
+    { icon: <BarChart3 className="h-5 w-5" />, label: 'Rapports', action: () => router.push('/rapports'), color: 'bg-orange-500 hover:bg-orange-600' },
+    { icon: <Settings className="h-5 w-5" />, label: 'Paramètres', action: () => router.push('/settings'), color: 'bg-gray-600 hover:bg-gray-700' }
+  ]
 
   useEffect(() => {
     async function fetchStats() {
@@ -150,81 +166,19 @@ export default function DashboardPage() {
           }
         })
 
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
-        }
+        if (!response.ok) throw new Error('Erreur lors du chargement des statistiques')
+        const data = await response.json()
+        setStats(data)
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error)
-        // Set mock stats for demo
-        const mockStats: DashboardStats = {
-          todaySales: 125000,
-          todayProfit: 45000,
-          todayExpenses: 80000,
-          lowStockProducts: 3,
-          customerDebts: 65000,
-          cashBalance: 125000,
-          totalProducts: 156,
-          totalSales: 1850000,
-          totalCustomers: 48,
-          recentTransactions: [
-            {
-              id: '1',
-              type: 'sale',
-              amount: 15000,
-              customer: 'Jean-Baptiste Ondo',
-              time: '10:30',
-              status: 'completed'
-            },
-            {
-              id: '2',
-              type: 'sale',
-              amount: 8500,
-              customer: 'Marie Léontine Obame',
-              time: '09:45',
-              status: 'completed'
-            },
-            {
-              id: '3',
-              type: 'expense',
-              amount: 5000,
-              description: 'Achat de fournitures',
-              time: '08:15',
-              status: 'completed'
-            },
-            {
-              id: '4',
-              type: 'sale',
-              amount: 22000,
-              customer: 'Paul Nguema',
-              time: '11:20',
-              status: 'completed'
-            },
-            {
-              id: '5',
-              type: 'sale',
-              amount: 6500,
-              customer: 'Simone Eya',
-              time: '14:30',
-              status: 'completed'
-            }
-          ],
-          topProducts: [
-            { name: 'Riz gabonais 1kg', quantity: 45, sales: 675000 },
-            { name: 'Huile de palme 1L', quantity: 12, sales: 180000 },
-            { name: 'Sucre local 1kg', quantity: 8, sales: 96000 },
-            { name: 'Farine de manioc 1kg', quantity: 15, sales: 225000 },
-            { name: 'Lait en poudre Nido', quantity: 5, sales: 125000 }
-          ]
-        }
-        setStats(mockStats)
+        console.error('Erreur:', error)
+        showNotification('error', 'Erreur lors du chargement des statistiques')
       } finally {
         setLoading(false)
       }
     }
 
     fetchStats()
-  }, [])
+  }, [showNotification])
 
   if (loading) {
     return (
@@ -250,12 +204,26 @@ export default function DashboardPage() {
   }
 
   return (
-      <div className="p-4">
-        {/* Header - Mobile First */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-blue-400 mb-2 font-serif">Tableau de bord</h1>
-          <p className="text-gray-200 text-sm md:text-base">Vue d&apos;ensemble de votre activité commerciale</p>
+    <div className="p-4">
+      {/* Barre d'actions rapides - Même ligne que les notifications */}
+      <div className="bg-black/40 backdrop-blur-md rounded-xl p-3 shadow-xl border border-white/10 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="text-white font-semibold">Tableau de bord</div>
+          <div className="flex items-center space-x-2">
+            {quickActions.map((action, index) => (
+              <button
+                key={index}
+                onClick={action.action}
+                className={`${action.color} text-white p-2 rounded-lg transition-all duration-200 hover:scale-105 flex items-center space-x-2`}
+                title={action.label}
+              >
+                {action.icon}
+                <span className="hidden sm:inline text-sm font-medium">{action.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
       {/* Stats Grid - Mobile First */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -316,6 +284,10 @@ export default function DashboardPage() {
           <LowStockAlert products={stats.topProducts} />
         </div>
       </div>
+
+      {/* Composants partagés */}
+      <ConfirmDialogComponent />
+      <NotificationComponent />
     </div>
   )
 }

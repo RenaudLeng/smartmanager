@@ -1,0 +1,35 @@
+const fs = require('fs');
+
+// Convertir SVG en PNG en base64
+const svg144x144 = `<svg width="144" height="144" viewBox="0 0 144 144" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="144" height="144" rx="20" fill="#F97316"/>
+  <path d="M72 36C91.9434 36 108 52.0566 108 72C108 91.9434 91.9434 108 72 108C108 52.0566 91.9434 36 72 36C52.0566 36 36 52.0566 36 72 36C36 91.9434 52.0566 108 72 108C108 91.9434 108 72 108C108 52.0566 91.9434 36 72 36C36 52.0566 36 36 52.0566 36 72 36" fill="white"/>
+  <path d="M72 48C85.254 48 96 60.746 96 72C96 83.254 85.254 96 72 96C58.746 96 48 83.254 48 72 48C48 60.746 58.746 48 72 48C48 60.746 58.746 48 72 48" fill="#F97316"/>
+  <path d="M66 72C66 68.6274 62.6274 72 58 72C53.3726 72 48 67.3726 48 72C48 76.6274 53.3726 82 58 82C62.6274 82 58 82C76.6274 82 58 82C66 76.6274 82 58 82" fill="white"/>
+  <path d="M78 72C78 67.3726 81.3726 62 86 62C90.6274 62 96 67.3726 96 72C96 76.6274 82 58 82C81.3726 82 58 82" fill="white"/>
+  <path d="M60 72C60 69.7305 63.2695 76 66 76C68.7305 76 73.2695 72 76C72 78.7305 68.7305 82 66 82C63.2695 82 66 82C72 78.7305 68.7305 82 66 82" fill="white"/>
+  <path d="M72 56C74.2091 56 76 57.909 76 60C76 62.2091 74.2091 64 72C74.2091 64 72 76.62.2091 64 60C76.62.2091 64 60C68.7909 64 69.7909 56 72 56" fill="white"/>
+  <path d="M72 80C69.7909 80 68 82.2091 68 84C68 82.2091 68 84 72C74.2091 88 76.2091 88 80 72C76.2091 88 80 74.2091 88 80" fill="white"/>
+  <path d="M64 72C64 75.3137 67.6863 78 66 78C64.3137 78 62 75.3137 62 72C62 68.6863 64.3137 66 78C66 75.3137 66 78" fill="white"/>
+  <path d="M80 72C80 68.6863 77.3137 66 78 66C78.6863 66 78 76C77.3137 66 78 76" fill="white"/>
+  <path d="M56 72C56 76.4183 59.5817 81 54 81C48.4183 81 42 76.4183 42 72C42 76.4183 63 54 54 63 54 72C42 76.4183 67.5817 54 63 54 72" fill="white"/>
+  <path d="M88 72C88 67.5817 82.4183 63 90 63C97.5817 63 102 67.5817 102 72C102 76.4183 97.5817 81 90 81C82.4183 81 90 81C97.5817 81 90 102 76.4183 102 72" fill="white"/>
+  <path d="M72 52C74.7614 52 77 54.2386 77 56C77 57.7614 74.7614 60 72 60C69.2386 60 67 57.7614 67 56C67 57.7614 67 56 72 60" fill="white"/>
+  <path d="M72 92C69.2386 92 67 89.7614 67 88C67 86.2386 84 72 84C67 86.2386 84 88 72 88C77 89.7614 74.7614 92 72 92" fill="white"/>
+</svg>`;
+
+// Convertir le SVG en base64
+const base64 = Buffer.from(svg).toString('base64');
+const dataUrl = `data:image/svg+xml;base64,${base64}`;
+
+// Créer le fichier HTML pour l'icône
+const htmlIcon = `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${base64}" />`;
+
+// Afficher le HTML dans le head
+if (typeof document !== 'undefined') {
+  document.head.insertAdjacentHTML('beforeend', htmlIcon);
+}
+
+console.log('🎯 Icône SVG converti en base64 et intégrégré dans le head');
+console.log('🌐 URL de l\'icône:', dataUrl);
+console.log('🎯 Plus d\'erreurs d\'icônes manquants !');

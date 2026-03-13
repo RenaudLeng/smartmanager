@@ -195,11 +195,11 @@ export default function POSPage() {
     }
   }
 
-  const calculateChange = () => {
+  const calculateChange = useCallback(() => {
     const total = getTotalAmount()
     const paid = parseFloat(customerAmount) || 0
     return paid - total
-  }
+  }, [getTotalAmount, customerAmount])
 
   const confirmPayment = useCallback(async () => {
     const totalAmount = getTotalAmount()
