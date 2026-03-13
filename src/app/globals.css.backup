@@ -47,22 +47,16 @@
 
 /* Light theme overrides */
 .light-theme {
-  --bg-primary: 248 250 252;
-  --bg-secondary: 241 245 249;
-  --bg-tertiary: 226 232 240;
-  --bg-card: 255 255 255;
-  --text-primary: 15 23 42;
-  --text-secondary: 71 85 105;
+  --bg-primary: 255 255 255;
+  --bg-secondary: 249 250 251;
+  --bg-tertiary: 243 244 246;
+  --text-primary: 17 24 39;
+  --text-secondary: 75 85 99;
   --text-tertiary: 107 114 128;
-  --text-muted: 156 163 175;
   --border-primary: 229 231 235;
-  --border-secondary: 203 213 225;
-  --border-tertiary: 189 195 205;
+  --border-secondary: 209 213 219;
   --orange-primary: 251 146 60;
-  --orange-secondary: 234 88 12;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --orange-secondary: 254 215 170;
 }
 
 /* Dark theme overrides (default) */
@@ -97,38 +91,31 @@ body {
 }
 
 .light-theme .bg-black {
-  background-color: rgb(var(--bg-card)) !important;
-  box-shadow: var(--shadow-sm);
+  background-color: rgb(var(--bg-primary)) !important;
 }
 
 .light-theme .bg-black\/40 {
   background-color: rgb(var(--bg-secondary) / 0.4) !important;
-  box-shadow: var(--shadow-sm);
 }
 
 .light-theme .bg-black\/90 {
-  background-color: rgb(var(--bg-card) / 0.95) !important;
-  box-shadow: var(--shadow-md);
+  background-color: rgb(var(--bg-primary) / 0.9) !important;
 }
 
 .light-theme .bg-black\/80 {
-  background-color: rgb(var(--bg-card) / 0.8) !important;
-  box-shadow: var(--shadow-md);
+  background-color: rgb(var(--bg-primary) / 0.8) !important;
 }
 
 .light-theme .bg-black\/60 {
   background-color: rgb(var(--bg-secondary) / 0.6) !important;
-  box-shadow: var(--shadow-sm);
 }
 
 .light-theme .bg-white\/10 {
   background-color: rgb(var(--bg-secondary) / 0.1) !important;
-  box-shadow: var(--shadow-sm);
 }
 
 .light-theme .bg-white\/20 {
   background-color: rgb(var(--bg-secondary) / 0.2) !important;
-  box-shadow: var(--shadow-sm);
 }
 
 .light-theme .bg-white\/5 {
@@ -147,10 +134,6 @@ body {
   color: rgb(var(--text-tertiary)) !important;
 }
 
-.light-theme .text-gray-500 {
-  color: rgb(var(--text-muted)) !important;
-}
-
 .light-theme .border-white\/10 {
   border-color: rgb(var(--border-primary) / 0.1) !important;
 }
@@ -160,7 +143,7 @@ body {
 }
 
 .light-theme .placeholder-gray-400::placeholder {
-  color: rgb(var(--text-muted)) !important;
+  color: rgb(var(--text-tertiary)) !important;
 }
 
 /* Orange colors stay consistent */
