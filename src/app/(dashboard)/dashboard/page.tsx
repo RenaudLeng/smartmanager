@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, AlertTriangle, Wallet, ArrowUp, ArrowDown, Plus, Package, Calculator, BarChart3, Settings } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, AlertTriangle, Wallet, ArrowUp, ArrowDown, Plus, Package, Calculator } from 'lucide-react'
 import { SmartAlerts } from '@/components/Notifications/SmartAlerts'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -148,10 +148,7 @@ export default function DashboardPage() {
   const quickActions = [
     { icon: <Plus className="h-5 w-5" />, label: 'POS', action: () => router.push('/pos'), color: 'bg-green-500 hover:bg-green-600' },
     { icon: <Package className="h-5 w-5" />, label: 'Stock', action: () => router.push('/stock'), color: 'bg-blue-500 hover:bg-blue-600' },
-    { icon: <Users className="h-5 w-5" />, label: 'Clients', action: () => router.push('/clients'), color: 'bg-purple-500 hover:bg-purple-600' },
-    { icon: <Calculator className="h-5 w-5" />, label: 'Dépenses', action: () => router.push('/depenses'), color: 'bg-red-500 hover:bg-red-600' },
-    { icon: <BarChart3 className="h-5 w-5" />, label: 'Rapports', action: () => router.push('/rapports'), color: 'bg-orange-500 hover:bg-orange-600' },
-    { icon: <Settings className="h-5 w-5" />, label: 'Paramètres', action: () => router.push('/settings'), color: 'bg-gray-600 hover:bg-gray-700' }
+    { icon: <Calculator className="h-5 w-5" />, label: 'Dépenses', action: () => router.push('/depenses'), color: 'bg-red-500 hover:bg-red-600' }
   ]
 
   useEffect(() => {

@@ -134,7 +134,13 @@ export function AppLayout({ children }: AppLayoutProps) {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <h1 className="text-white text-lg font-semibold">{getPageTitle()}</h1>
+              {/* Logo */}
+              <img 
+                src="/logo.png" 
+                alt="SmartManager" 
+                className="h-8 w-auto object-contain"
+              />
+              <h1 className="text-white text-lg font-semibold ml-3">{getPageTitle()}</h1>
             </div>
             <NotificationCenter
               notifications={notifications}

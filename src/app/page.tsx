@@ -2,6 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { 
+  ShoppingCart, 
+  Package, 
+  CreditCard, 
+  Users, 
+  BarChart3, 
+  Smartphone,
+  ArrowRight,
+  CheckCircle,
+  Zap,
+  Shield,
+  Globe
+} from 'lucide-react'
 
 export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -35,6 +48,15 @@ export default function HomePage() {
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
+            {/* Logo principal */}
+            <div className="flex justify-center mb-12">
+              <img 
+                src="/logo.png" 
+                alt="SmartManager" 
+                className="h-32 w-auto object-contain drop-shadow-2xl"
+              />
+            </div>
+            
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
               SmartManager
             </h1>
@@ -72,76 +94,94 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-slate-700 p-6 rounded-lg">
-              <div className="bg-green-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+            {/* POS / Caisse */}
+            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/10">
+              <div className="bg-linear-to-r from-green-500 to-green-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <ShoppingCart className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">POS / Caisse</h3>
-              <p className="text-slate-300">
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-green-400 transition-colors">POS / Caisse</h3>
+              <p className="text-slate-300 leading-relaxed mb-4">
                 Gérez vos ventes rapidement avec scan de codes barres et paiements multiples
               </p>
+              <div className="flex items-center text-green-400 text-sm font-medium">
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Scan ultra-rapide
+              </div>
             </div>
 
-            <div className="bg-slate-700 p-6 rounded-lg">
-              <div className="bg-green-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+            {/* Gestion de stock */}
+            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
+              <div className="bg-linear-to-r from-blue-500 to-blue-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Package className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Gestion de stock</h3>
-              <p className="text-slate-300">
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">Gestion de stock</h3>
+              <p className="text-slate-300 leading-relaxed mb-4">
                 Suivez vos inventaires en temps réel et recevez des alertes de stock faible
               </p>
+              <div className="flex items-center text-blue-400 text-sm font-medium">
+                <Zap className="w-4 h-4 mr-2" />
+                Alertes intelligentes
+              </div>
             </div>
 
-            <div className="bg-slate-700 p-6 rounded-lg">
-              <div className="bg-green-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            {/* Dépenses */}
+            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-purple-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10">
+              <div className="bg-linear-to-r from-purple-500 to-purple-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <CreditCard className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Dépenses</h3>
-              <p className="text-slate-300">
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">Dépenses</h3>
+              <p className="text-slate-300 leading-relaxed mb-4">
                 Suivez toutes vos dépenses et analysez votre rentabilité
               </p>
+              <div className="flex items-center text-purple-400 text-sm font-medium">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analyse rentabilité
+              </div>
             </div>
 
-            <div className="bg-slate-700 p-6 rounded-lg">
-              <div className="bg-green-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+            {/* Personnel */}
+            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10">
+              <div className="bg-linear-to-r from-yellow-500 to-yellow-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Personnel</h3>
-              <p className="text-slate-300">
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-yellow-400 transition-colors">Personnel</h3>
+              <p className="text-slate-300 leading-relaxed mb-4">
                 Gérez vos employés et suivez les salaires et performances
               </p>
+              <div className="flex items-center text-yellow-400 text-sm font-medium">
+                <Shield className="w-4 h-4 mr-2" />
+                Gestion complète
+              </div>
             </div>
 
-            <div className="bg-slate-700 p-6 rounded-lg">
-              <div className="bg-green-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+            {/* Analytics */}
+            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-red-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10">
+              <div className="bg-linear-to-r from-red-500 to-red-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <BarChart3 className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Analytics</h3>
-              <p className="text-slate-300">
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-red-400 transition-colors">Analytics</h3>
+              <p className="text-slate-300 leading-relaxed mb-4">
                 Analysez vos performances avec des rapports détaillés et graphiques
               </p>
+              <div className="flex items-center text-red-400 text-sm font-medium">
+                <Globe className="w-4 h-4 mr-2" />
+                Rapports avancés
+              </div>
             </div>
 
-            <div className="bg-slate-700 p-6 rounded-lg">
-              <div className="bg-green-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+            {/* Mobile First */}
+            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/10 md:col-span-2 lg:col-span-1">
+              <div className="bg-linear-to-r from-orange-500 to-orange-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Smartphone className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Mobile First</h3>
-              <p className="text-slate-300">
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-orange-400 transition-colors">Mobile First</h3>
+              <p className="text-slate-300 leading-relaxed mb-4">
                 Application PWA installable, fonctionne offline et optimisée pour mobile
               </p>
+              <div className="flex items-center text-orange-400 text-sm font-medium">
+                <ArrowRight className="w-4 h-4 mr-2" />
+                100% mobile
+              </div>
             </div>
           </div>
         </div>

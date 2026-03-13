@@ -149,12 +149,15 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
       <div className="p-6 border-b border-orange-900/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-linear-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">
-              <Store className="w-6 h-6 text-white" />
-            </div>
+            {/* Logo */}
+            <img 
+              src="/logo.png" 
+              alt="SmartManager" 
+              className="h-16 w-auto object-contain"
+            />
             <div>
               <h1 className="text-xl font-bold text-white">SmartManager</h1>
-              <p className="text-sm text-white">{user?.tenant?.name || 'Supermarché Libreville'}</p>
+              <p className="text-sm text-white">{user?.tenant?.name || 'Boutique Test'}</p>
             </div>
           </div>
           

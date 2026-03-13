@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { ShoppingCart, Plus, Minus, Trash2, Search, Package, CreditCard, Smartphone, Receipt, History, CheckCircle, X, Grid, List } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, Search, Package, CreditCard, Smartphone, Receipt, History, CheckCircle, X, Grid, List, Camera } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { bluetoothPrintService } from '@/services/BluetoothPrintService'
+import { ScannerModal } from '@/components/ScannerModal'
+import { Result } from '@zxing/library'
 
 interface Product {
   id: string
@@ -11,6 +13,7 @@ interface Product {
   price: number
   stock: number
   category: string
+  barcode?: string  // 🔥 NOUVEAU : Code-barres EAN-13
   image?: string
 }
 
@@ -37,7 +40,6 @@ interface Sale {
 export default function POSPage() {
   const tenantData = useTenant()
   const businessType = tenantData.getBusinessLabel()
-  const businessFeatures = tenantData.getBusinessFeatures()
   
   // Initialize products data directly in useState to avoid useEffect
   const [products] = useState<Product[]>(() => {
@@ -45,14 +47,14 @@ export default function POSPage() {
     switch (businessType) {
       case 'Restaurant':
         return [
-          { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, category: 'Plats principaux' },
-          { id: '2', name: 'Poulet braisé', price: 3500, stock: 30, category: 'Plats principaux' },
-          { id: '3', name: 'Attiéké', price: 2000, stock: 45, category: 'Plats principaux' },
-          { id: '4', name: 'Coca-Cola 33cl', price: 300, stock: 100, category: 'Boissons' },
-          { id: '5', name: 'Jus de fruit frais', price: 500, stock: 25, category: 'Boissons' },
-          { id: '6', name: 'Eau minérale 1.5L', price: 400, stock: 15, category: 'Boissons' },
-          { id: '7', name: 'Salade composée', price: 1200, stock: 60, category: 'Entrées' },
-          { id: '8', name: 'Pain', price: 200, stock: 40, category: 'Accompagnements' }
+          { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, category: 'Plats principaux', barcode: '9782010123456' },
+          { id: '2', name: 'Poulet braisé', price: 3500, stock: 30, category: 'Plats principaux', barcode: '9782010123457' },
+          { id: '3', name: 'Attiéké', price: 2000, stock: 45, category: 'Plats principaux', barcode: '9782010123458' },
+          { id: '4', name: 'Coca-Cola 33cl', price: 300, stock: 100, category: 'Boissons', barcode: '5449000000996' },
+          { id: '5', name: 'Jus de fruit frais', price: 500, stock: 25, category: 'Boissons', barcode: '9782010123459' },
+          { id: '6', name: 'Eau minérale 1.5L', price: 400, stock: 15, category: 'Boissons', barcode: '9782010123460' },
+          { id: '7', name: 'Salade composée', price: 1200, stock: 60, category: 'Entrées', barcode: '9782010123461' },
+          { id: '8', name: 'Pain', price: 200, stock: 40, category: 'Accompagnements', barcode: '9782010123462' }
         ]
       case 'Bar':
         return [
@@ -114,6 +116,7 @@ export default function POSPage() {
   const [salesHistory, setSalesHistory] = useState<Sale[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationIdCounter, setNotificationIdCounter] = useState(0)
+  const [showScanner, setShowScanner] = useState(false)  // 🔥 NOUVEAU : État du scanner
   
   // États pour le processus de paiement
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
@@ -121,15 +124,10 @@ export default function POSPage() {
   const [paymentStep, setPaymentStep] = useState<'method' | 'amount' | 'confirm'>('method')
 
   // Notification system
-  const showNotification = useCallback((type: 'success' | 'error' | 'warning' | 'info', message: string, duration = 3000) => {
+  const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string, duration = 3000) => {
     const id = `notification-${notificationIdCounter + 1}`
     setNotificationIdCounter(prev => prev + 1)
     setNotifications(prev => [...prev, { id, type, message, duration }])
-    if (duration > 0) {
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== id))
-      }, duration)
-    }
   }, [notificationIdCounter, setNotificationIdCounter, setNotifications])
 
   const removeNotification = useCallback((id: string) => {
@@ -154,6 +152,26 @@ export default function POSPage() {
       }
       return [...prevCart, { ...product, quantity: 1 }]
     })
+  }
+
+  // 🔥 FONCTION DE RECHERCHE PAR CODE-BARRES
+  const findProductByBarcode = (barcode: string): Product | undefined => {
+    return products.find(product => product.barcode === barcode)
+  }
+
+  const handleScanSuccess = (result: Result) => {
+    console.log('🔥 CODE-BARRES SCANNÉ:', result.getText())
+    const barcode = result.getText()
+    const product = findProductByBarcode(barcode)
+    
+    if (product) {
+      console.log('✅ PRODUIT TROUVÉ:', product.name)
+      addToCart(product)
+      showNotification('success', `${product.name} ajouté au panier`)
+    } else {
+      console.log('❌ PRODUIT NON TROUVÉ pour le code:', barcode)
+      showNotification('error', `Produit non trouvé pour le code: ${barcode}`)
+    }
   }
 
   const removeFromCart = (productId: string) => {
@@ -275,42 +293,46 @@ export default function POSPage() {
                 {businessType === 'Bar' && 'Point de Vente - Bar'}
                 {businessType === 'Pharmacie' && 'Point de Vente - Pharmacie'}
                 {businessType === 'Supermarché' && 'Point de Vente - Supermarché'}
-                {(businessType === 'Boutique' || !businessType) && 'Point de Vente - Boutique'}
+                {(businessType === 'Boutique' || !businessType) && 'POS - Boutique'}
               </h1>
               <p className="text-gray-400 text-sm">{tenantData.getBusinessLabel()}</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* 🔥 BOUTON SCANNER - Action rapide permanente */}
+              <button
+                onClick={() => setShowScanner(true)}
+                className="flex items-center space-x-2 px-3 py-2 sm:px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transform hover:scale-105"
+                title="Scanner un code-barres (accès rapide)"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="hidden sm:inline font-medium">Scanner</span>
+              </button>
+              
               {/* Ticket Button */}
               <button
                 onClick={() => currentSale && setShowTicket(true)}
                 disabled={!currentSale}
-                className="flex items-center space-x-2 px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 disabled:bg-gray-500/20 disabled:opacity-50 text-orange-400 disabled:text-gray-400 rounded-lg transition-all backdrop-blur-sm border border-orange-500/30 disabled:border-gray-500/30"
+                className="flex items-center space-x-2 px-3 py-2 sm:px-4 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all backdrop-blur-sm border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Receipt className="h-4 w-4" />
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="hidden sm:inline">Ticket</span>
               </button>
               
               {/* History Button */}
               <button
                 onClick={() => setShowHistory(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all backdrop-blur-sm border border-blue-500/30"
+                className="flex items-center space-x-2 px-3 py-2 sm:px-4 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all backdrop-blur-sm border border-blue-500/30"
               >
-                <History className="h-4 w-4" />
+                <History className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="hidden sm:inline">Historique</span>
               </button>
               
               <div className="text-right">
-                <p className="text-orange-400 text-sm font-medium">
-                  {businessFeatures.allowsTableService && 'Service sur place'}
-                  {businessFeatures.allowsDelivery && 'Livraison disponible'}
-                  {!businessFeatures.allowsTableService && !businessFeatures.allowsDelivery && 'Service disponible'}
-                </p>
                 <p className="text-gray-400 text-xs">
                   {businessType === 'Restaurant' && 'Plats chauds et boissons'}
                   {businessType === 'Bar' && 'Boissons et cocktails'}
                   {businessType === 'Pharmacie' && 'Médicaments et produits de santé'}
                   {businessType === 'Supermarché' && 'Produits divers et alimentaires'}
-                  {businessType === 'Boutique' && 'Articles divers et spécialisés'}
                 </p>
               </div>
             </div>
@@ -533,27 +555,27 @@ export default function POSPage() {
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 sm:space-y-3">
                 {filteredProducts.map(product => (
                   <div
                     key={product.id}
-                    className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-4 hover:border-orange-500 hover:bg-white/10 transition-all duration-200 cursor-pointer group"
+                    className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-3 sm:p-4 hover:border-orange-500 hover:bg-white/10 transition-all duration-200 cursor-pointer group"
                     onClick={() => addToCart(product)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 flex-1">
-                        {/* Product Icon */}
-                        <div className="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
-                          <Package className="h-6 w-6 text-orange-400" />
+                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                      <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+                        {/* Product Icon - Responsive */}
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors shrink-0">
+                          <Package className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
                         </div>
                         
-                        {/* Product Info */}
-                        <div className="flex-1">
-                          <h3 className="text-white font-medium text-sm mb-1">{product.name}</h3>
-                          <div className="flex items-center space-x-4">
-                            <p className="text-green-400 font-bold">{product.price.toLocaleString('fr-GA')} XAF</p>
-                            <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded">{product.category}</span>
-                            <div className={`text-xs px-2 py-1 rounded-full ${
+                        {/* Product Info - Optimized for mobile */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white font-medium text-xs sm:text-sm mb-1 truncate">{product.name}</h3>
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                            <p className="text-green-400 font-bold text-xs sm:text-sm">{product.price.toLocaleString('fr-GA')} XAF</p>
+                            <span className="text-xs bg-orange-500/20 text-orange-400 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded truncate max-w-[100px] sm:max-w-none">{product.category}</span>
+                            <div className={`text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full shrink-0 ${
                               product.stock < 10 
                                 ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
                                 : product.stock < 25
@@ -566,16 +588,16 @@ export default function POSPage() {
                         </div>
                       </div>
                       
-                      {/* Add Button */}
+                      {/* Add Button - Optimisé pour Mobile */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           addToCart(product)
                         }}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                        className="bg-orange-500 hover:bg-orange-600 text-white p-2 sm:p-3 rounded-lg transition-colors flex items-center justify-center shrink-0"
+                        title="Ajouter au panier"
                       >
-                        <Plus className="h-4 w-4" />
-                        <span>Ajouter</span>
+                        <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                     </div>
                   </div>
@@ -1069,6 +1091,14 @@ export default function POSPage() {
           </div>
         ))}
       </div>
+      
+      {/* 🔥 MODAL SCANNER DE CODES-BARRES */}
+      {showScanner && (
+        <ScannerModal
+          onClose={() => setShowScanner(false)}
+          onScanSuccess={handleScanSuccess}
+        />
+      )}
     </div>
   )
 }

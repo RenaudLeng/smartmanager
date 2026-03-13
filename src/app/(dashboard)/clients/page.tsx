@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Search, Users, Grid, List, Mail, Phone, Edit, Trash2, TrendingUp, ArrowLeft, MapPin, X } from 'lucide-react'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -18,10 +18,71 @@ interface Customer {
 }
 
 export default function ClientsPage() {
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [customers] = useState<Customer[]>([
+    {
+      id: '1',
+      name: 'Jean-Pierre Mba',
+      email: 'jp.mba@email.com',
+      phone: '+241 66 12 34 56',
+      address: 'Libreville, Gabon',
+      totalPurchases: 1500000,
+      totalDebt: 250000,
+      lastPurchase: '2024-03-15',
+      status: 'vip',
+      createdAt: '2023-01-15'
+    },
+    {
+      id: '2',
+      name: 'Marie Nguema',
+      email: 'marie.ng@email.com',
+      phone: '+241 77 23 45 67',
+      address: 'Port-Gentil, Gabon',
+      totalPurchases: 750000,
+      totalDebt: 0,
+      lastPurchase: '2024-03-14',
+      status: 'active',
+      createdAt: '2023-03-20'
+    },
+    {
+      id: '3',
+      name: 'Paul Ondo',
+      email: 'paul.ondo@email.com',
+      phone: '+241 62 98 76 54',
+      address: 'Franceville, Gabon',
+      totalPurchases: 320000,
+      totalDebt: 50000,
+      lastPurchase: '2024-03-10',
+      status: 'active',
+      createdAt: '2023-06-10'
+    },
+    {
+      id: '4',
+      name: 'Sophie Biyogho',
+      email: 'sophie.b@email.com',
+      phone: '+241 74 56 78 90',
+      address: 'Oyem, Gabon',
+      totalPurchases: 2100000,
+      totalDebt: 150000,
+      lastPurchase: '2024-03-16',
+      status: 'vip',
+      createdAt: '2022-11-05'
+    },
+    {
+      id: '5',
+      name: 'Antoine Mounda',
+      email: 'a.mounda@email.com',
+      phone: '+241 66 33 44 55',
+      address: 'Lambaréné, Gabon',
+      totalPurchases: 450000,
+      totalDebt: 100000,
+      lastPurchase: '2024-02-28',
+      status: 'inactive',
+      createdAt: '2023-08-12'
+    }
+  ])
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
-  const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [showDetails, setShowDetails] = useState(false)
@@ -47,14 +108,10 @@ export default function ClientsPage() {
     if (confirmed) {
       try {
         // Simuler la suppression du client
-        setCustomers(prev => prev.filter(c => c.id !== customer.id))
-        
-        // Afficher la notification de succès
         showNotification(
           'success', 
           `Client "${customer.name}" supprimé avec succès!`
         )
-
         console.log('Client supprimé:', customer.id)
       } catch (error) {
         showNotification(
@@ -65,87 +122,6 @@ export default function ClientsPage() {
       }
     }
   }, [confirm, showNotification])
-
-  useEffect(() => {
-    setTimeout(() => {
-      const mockCustomers: Customer[] = [
-        {
-          id: '1',
-          name: 'Mamadou Diallo',
-          email: 'mamadou.d@email.com',
-          phone: '+221 77 123 45 67',
-          address: 'Dakar, Plateau',
-          totalPurchases: 150000,
-          totalDebt: 25000,
-          lastPurchase: '2024-03-10',
-          status: 'vip',
-          createdAt: '2023-01-15'
-        },
-        {
-          id: '2',
-          name: 'Fatou Sow',
-          email: 'fatou.s@email.com',
-          phone: '+221 76 234 56 78',
-          address: 'Dakar, Grand Yoff',
-          totalPurchases: 85000,
-          totalDebt: 0,
-          lastPurchase: '2024-03-09',
-          status: 'active',
-          createdAt: '2023-03-20'
-        },
-        {
-          id: '3',
-          name: 'Jean-Baptiste Ondo',
-          email: 'jb.ondo@email.ga',
-          phone: '+241 07 23 45 67',
-          address: 'Libreville, Montagne',
-          totalPurchases: 45000,
-          totalDebt: 12000,
-          lastPurchase: '2024-03-08',
-          status: 'active',
-          createdAt: '2023-06-10'
-        },
-        {
-          id: '4',
-          name: 'Marie Léontine Obame',
-          email: 'marie.obame@email.ga',
-          phone: '+241 06 45 67 89',
-          address: 'Libreville, Centre-ville',
-          totalPurchases: 200000,
-          totalDebt: 0,
-          lastPurchase: '2024-03-10',
-          status: 'vip',
-          createdAt: '2022-11-05'
-        },
-        {
-          id: '5',
-          name: 'Paul Nguema',
-          email: 'paul.nguema@email.ga',
-          phone: '+241 02 34 56 78',
-          address: 'Port-Gentil',
-          totalPurchases: 85000,
-          totalDebt: 25000,
-          lastPurchase: '2024-03-05',
-          status: 'inactive',
-          createdAt: '2023-09-15'
-        },
-        {
-          id: '6',
-          name: 'Simone Eya',
-          email: 'simone.eya@email.ga',
-          phone: '+241 07 67 89 01',
-          address: 'Libreville, Nzeng-Ayong',
-          totalPurchases: 120000,
-          totalDebt: 15000,
-          lastPurchase: '2024-03-07',
-          status: 'active',
-          createdAt: '2023-02-28'
-        }
-      ]
-      setCustomers(mockCustomers)
-      setLoading(false)
-    }, 100)
-  }, [])
 
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -185,17 +161,6 @@ export default function ClientsPage() {
   const activeCustomers = customers.filter(c => c.status === 'active').length
   const vipCustomers = customers.filter(c => c.status === 'vip').length
   const totalDebt = customers.reduce((sum, c) => sum + c.totalDebt, 0)
-
-  if (loading) {
-    return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-            <p className="text-white mt-4">Chargement des clients...</p>
-          </div>
-        </div>
-    )
-  }
 
   return (
     <>

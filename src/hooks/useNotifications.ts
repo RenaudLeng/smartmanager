@@ -34,15 +34,15 @@ const DEFAULT_CONFIG: SmartAlertConfig = {
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   userId: '',
-  enabled: true,
+  enabled: false, // Désactiver les notifications par défaut
   rules: [],
   quietHours: {
     enabled: false,
     start: '22:00',
     end: '08:00'
   },
-  soundEnabled: true,
-  desktopNotifications: true,
+  soundEnabled: false, // Désactiver le son par défaut
+  desktopNotifications: false, // Désactiver les notifications desktop par défaut
   emailNotifications: false
 }
 
@@ -53,21 +53,12 @@ export function useNotifications() {
 
   useEffect(() => {
     const loadSavedData = () => {
-      const savedNotifications = localStorage.getItem('notifications')
+      // Effacer toutes les notifications existantes au chargement
+      localStorage.removeItem('notifications')
+      setNotifications([])
+      
       const savedPreferences = localStorage.getItem('notificationPreferences')
       const savedConfig = localStorage.getItem('smartAlertConfig')
-
-      if (savedNotifications) {
-        try {
-          const parsed = JSON.parse(savedNotifications)
-          setNotifications(parsed.map((n: NotificationType) => ({
-            ...n,
-            timestamp: new Date(n.timestamp)
-          })))
-        } catch (error) {
-          console.error('Erreur lors du chargement des notifications:', error)
-        }
-      }
 
       if (savedPreferences) {
         try {

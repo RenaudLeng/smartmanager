@@ -18,13 +18,77 @@ interface Expense {
 }
 
 export default function DepensesPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  // Optimisé : données mock chargées directement sans délai artificiel
+  const [expenses] = useState<Expense[]>([
+    {
+      id: '1',
+      description: 'Achat de matériel informatique',
+      amount: 250000,
+      category: 'fourniture',
+      date: '2024-03-15',
+      paymentMethod: 'Carte bancaire',
+      receipt: 'receipt-001.pdf',
+      notes: 'Nouveaux ordinateurs pour le bureau',
+      createdAt: '2024-03-15T10:30:00Z',
+      updatedAt: '2024-03-15T10:30:00Z'
+    },
+    {
+      id: '2',
+      description: 'Loyer mensuel',
+      amount: 500000,
+      category: 'loyer',
+      date: '2024-03-01',
+      paymentMethod: 'Virement bancaire',
+      receipt: 'receipt-002.pdf',
+      notes: 'Loyer bureau principal',
+      createdAt: '2024-03-01T09:00:00Z',
+      updatedAt: '2024-03-01T09:00:00Z'
+    },
+    {
+      id: '3',
+      description: 'Électricité',
+      amount: 85000,
+      category: 'energie',
+      date: '2024-03-10',
+      paymentMethod: 'Espèces',
+      receipt: 'receipt-003.pdf',
+      notes: 'Facture SEEG Mars 2024',
+      createdAt: '2024-03-10T14:20:00Z',
+      updatedAt: '2024-03-10T14:20:00Z'
+    },
+    {
+      id: '4',
+      description: 'Salaires employés',
+      amount: 1200000,
+      category: 'personnel',
+      date: '2024-03-25',
+      paymentMethod: 'Virement bancaire',
+      receipt: 'receipt-004.pdf',
+      notes: 'Paie Mars 2024',
+      createdAt: '2024-03-25T16:00:00Z',
+      updatedAt: '2024-03-25T16:00:00Z'
+    },
+    {
+      id: '5',
+      description: 'Carburant véhicule',
+      amount: 120000,
+      category: 'transport',
+      date: '2024-03-18',
+      paymentMethod: 'Espèces',
+      receipt: 'receipt-005.pdf',
+      notes: 'Carburant véhicule de livraison',
+      createdAt: '2024-03-18T11:45:00Z',
+      updatedAt: '2024-03-18T11:45:00Z'
+    }
+  ])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [loading, setLoading] = useState(true)
+  // Pas de loading - données disponibles immédiatement
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   
   const { showNotification, NotificationComponent } = useNotifications()
   const { confirm, ConfirmDialogComponent } = useConfirmDialog()
@@ -40,76 +104,6 @@ export default function DepensesPage() {
     { value: 'maintenance', label: 'Maintenance et réparations' },
     { value: 'autre', label: 'Autres dépenses' }
   ]
-
-  // Mock data for demonstration
-  useEffect(() => {
-    setTimeout(() => {
-      const mockExpenses: Expense[] = [
-        {
-          id: '1',
-          description: 'Achat de matériel informatique',
-          amount: 250000,
-          category: 'fourniture',
-          date: '2024-03-10',
-          paymentMethod: 'Virement bancaire',
-          receipt: 'FACT-2024-03-001',
-          notes: 'Achat ordinateur portable pour bureau',
-          createdAt: '2024-03-10',
-          updatedAt: '2024-03-10'
-        },
-        {
-          id: '2',
-          description: 'Salaires du mois',
-          amount: 850000,
-          category: 'personnel',
-          date: '2024-03-15',
-          paymentMethod: 'Virement bancaire',
-          receipt: 'VIREMENT-2024-03',
-          notes: 'Salaires employés Mars',
-          createdAt: '2024-03-15',
-          updatedAt: '2024-03-15'
-        },
-        {
-          id: '3',
-          description: 'Loyer bureau',
-          amount: 150000,
-          category: 'loyer',
-          date: '2024-03-20',
-          paymentMethod: 'Espèces',
-          receipt: 'RECU-2024-03-020',
-          notes: 'Loyer bureau quartier Plateau',
-          createdAt: '2024-03-20',
-          updatedAt: '2024-03-20'
-        },
-        {
-          id: '4',
-          description: 'Facture électricité',
-          amount: 45000,
-          category: 'energie',
-          date: '2024-03-25',
-          paymentMethod: 'Carte de crédit',
-          receipt: 'FACT-2024-03-025',
-          notes: 'Consommation SENELEC',
-          createdAt: '2024-03-25',
-          updatedAt: '2024-03-25'
-        },
-        {
-          id: '5',
-          description: 'Transport livraison produits',
-          amount: 75000,
-          category: 'transport',
-          date: '2024-03-05',
-          paymentMethod: 'Espèces',
-          receipt: 'RECU-2024-03-005',
-          notes: 'Livraison fournisseur Port-Gentil',
-          createdAt: '2024-03-05',
-          updatedAt: '2024-03-05'
-        }
-      ]
-      setExpenses(mockExpenses)
-      setLoading(false)
-    }, 1000)
-  }, [])
 
   const filteredExpenses = expenses.filter(expense =>
     expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -183,14 +177,10 @@ export default function DepensesPage() {
     if (confirmed) {
       try {
         // Simuler la suppression de la dépense
-        setExpenses(prev => prev.filter(e => e.id !== expense.id))
-        
-        // Afficher la notification de succès
         showNotification(
           'success', 
           `Dépense "${expense.description}" supprimée avec succès!`
         )
-
         console.log('Dépense supprimée:', expense.id)
       } catch (error) {
         showNotification(

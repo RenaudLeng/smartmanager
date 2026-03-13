@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { User, Store, CreditCard, Bell, Shield, Palette, Smartphone, Save, Eye, EyeOff, Moon, Sun, Mail, ArrowLeft, Users, Key, Lock, Plus, Edit2, Trash2, X } from 'lucide-react'
+import { 
+  User, Store, Bell, Shield, Palette, Smartphone, Save, Eye, EyeOff, Moon, Sun, Mail, ArrowLeft, Users, Key, Lock, Plus, Edit2, Trash2, X 
+} from 'lucide-react'
 
 interface AppUser {
   id: string
@@ -61,15 +63,9 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
   
-  const showNotification = (type: 'success' | 'error' | 'warning' | 'info', message: string, duration = 3000) => {
+  const showNotification = (type: 'success' | 'error' | 'info', message: string, duration = 3000) => {
     const id = Date.now().toString()
     setNotifications(prev => [...prev, { id, type, message, duration }])
-    
-    if (duration > 0) {
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== id))
-      }, duration)
-    }
   }
   
   const removeNotification = (id: string) => {
@@ -146,24 +142,35 @@ export default function SettingsPage() {
   ]
 
   const handleSave = () => {
+    console.log('🔥 BOUTON SAVE FONCTIONNE!')
     showNotification('success', 'Paramètres sauvegardés avec succès!')
     
     // Appliquer le thème immédiatement sur le body
-    const body = document.body
-    if (settings.preferences.theme === 'light') {
-      body.classList.remove('dark-theme')
-      body.classList.add('light-theme')
+    if (settings.preferences.theme === 'dark') {
+      document.body.classList.add('dark')
     } else {
-      body.classList.remove('light-theme')
-      body.classList.add('dark-theme')
+      document.body.classList.remove('dark')
     }
+    
+    // Appliquer la langue
+    document.documentElement.lang = settings.preferences.language
+    
+    // Simuler une sauvegarde
+    setTimeout(() => {
+      showNotification('info', 'Toutes les modifications ont été enregistrées')
+    }, 1000)
   }
 
   const handlePasswordChange = () => {
+    console.log('🔥 BOUTON PASSWORD CHANGE FONCTIONNE!')
+    console.log('Nouveau mot de passe :', newPassword)
+    console.log('Confirmation du mot de passe :', confirmPassword)
     if (newPassword !== confirmPassword) {
+      console.log('Erreur : les mots de passe ne correspondent pas')
       showNotification('error', 'Les mots de passe ne correspondent pas!')
       return
     }
+    console.log('Mot de passe changé avec succès!')
     showNotification('success', 'Mot de passe changé avec succès!')
     setCurrentPassword('')
     setNewPassword('')
@@ -171,7 +178,10 @@ export default function SettingsPage() {
   }
 
   const handleAddUser = () => {
+    console.log('🔥 BOUTON ADD USER FONCTIONNE!')
+    console.log('Nouvel utilisateur :', newUser)
     if (!newUser.name || !newUser.email) {
+      console.log('Erreur : champs obligatoires manquants')
       showNotification('error', 'Veuillez remplir tous les champs obligatoires')
       return
     }
@@ -480,7 +490,7 @@ export default function SettingsPage() {
                                     ? 'text-orange-400 hover:bg-orange-500/20' 
                                     : 'text-green-400 hover:bg-green-500/20'
                                 }`}
-                                title={user.status === 'active' ? 'Désactiver' : 'Activer'}
+                                title={user.status === 'active' ? "Désactiver" : "Activer"}
                               >
                                 {user.status === 'active' ? <Lock className="h-4 w-4" /> : <Key className="h-4 w-4" />}
                               </button>
@@ -531,7 +541,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white font-medium">Délai d'expiration de session</p>
+                      <p className="text-white font-medium">Délai d&apos;expiration de session</p>
                       <p className="text-gray-400 text-sm">Déconnexion automatique après inactivité</p>
                     </div>
                     <button
@@ -555,12 +565,23 @@ export default function SettingsPage() {
 
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4">Changer le mot de passe</h3>
-                <div className="space-y-4">
+                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handlePasswordChange(); }}>
+                  <input
+                    type="text"
+                    name="username"
+                    autoComplete="username"
+                    value={settings.email || ''}
+                    readOnly
+                    className="absolute -left-full opacity-0 pointer-events-none"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  />
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Mot de passe actuel</label>
                     <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         className="w-full px-4 py-2 pr-10 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -578,6 +599,7 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Nouveau mot de passe</label>
                     <input
                       type="password"
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -587,18 +609,19 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Confirmer le mot de passe</label>
                     <input
                       type="password"
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                   <button
-                    onClick={handlePasswordChange}
+                    type="submit"
                     className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-orange-500/25"
                   >
                     Changer le mot de passe
                   </button>
-                </div>
+                </form>
               </div>
             </div>
           )}
@@ -690,7 +713,7 @@ export default function SettingsPage() {
           {activeTab === 'preferences' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Préférences d'affichage</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Préférences d&apos;affichage</h3>
                 <div className="space-y-6">
                   {/* Theme Toggle */}
                   <div>
@@ -708,9 +731,9 @@ export default function SettingsPage() {
                           )}
                         </div>
                         <div>
-                          <p className="text-white font-medium">Thème de l'interface</p>
+                          <p className="text-white font-medium">Thème de l&apos;interface</p>
                           <p className="text-gray-400 text-sm">
-                            {settings.preferences.theme === 'dark' ? 'Sombre - Idéal pour faible luminosité' : 'Clair - Idéal pour forte luminosité'}
+                            {settings.preferences.theme === 'dark' ? "Sombre - Idéal pour faible luminosité" : "Clair - Idéal pour forte luminosité"}
                           </p>
                         </div>
                       </div>
@@ -982,12 +1005,12 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Custom Notifications */}
-        <div className="fixed top-4 right-4 z-50 space-y-2">
+        {/* Custom Notifications - Optimisées pour Mobile */}
+        <div className="fixed top-16 right-2 left-2 sm:left-auto sm:right-4 sm:top-4 z-50 space-y-2 max-w-sm sm:max-w-md mx-auto sm:mx-0">
           {notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm border transition-all duration-300 transform translate-x-0 ${
+              className={`flex items-start space-x-3 px-3 py-2 sm:px-4 sm:py-3 rounded-lg shadow-lg backdrop-blur-sm border transition-all duration-300 transform translate-x-0 ${
                 notification.type === 'success' 
                   ? 'bg-green-500/20 border-green-500/30 text-green-400' 
                   : notification.type === 'error' 
@@ -997,36 +1020,36 @@ export default function SettingsPage() {
                   : 'bg-blue-500/20 border-blue-500/30 text-blue-400'
               }`}
             >
-              <div className="shrink-0">
+              <div className="shrink-0 mt-0.5">
                 {notification.type === 'success' && (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                 )}
                 {notification.type === 'error' && (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 )}
                 {notification.type === 'warning' && (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 )}
                 {notification.type === 'info' && (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                 )}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{notification.message}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium wrap-break-word">{notification.message}</p>
               </div>
               <button
                 onClick={() => removeNotification(notification.id)}
-                className="shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+                className="shrink-0 p-1 rounded hover:bg-white/10 transition-colors ml-1"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
           ))}

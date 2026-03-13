@@ -79,11 +79,15 @@ export default function LoginPage() {
     <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-linear-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/25">
-              <LogIn className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">SmartManager</h1>
+          <div className="text-center mb-4">
+            {/* Logo */}
+            <img 
+              src="/logo.png" 
+              alt="SmartManager" 
+              className="h-32 w-auto object-contain mx-auto mb-2"
+            />
+            
+            <h1 className="text-4xl font-black text-white mb-2 tracking-wide drop-shadow-lg">SmartManager</h1>
             <p className="text-gray-400">Gestion intelligente pour votre commerce</p>
           </div>
 

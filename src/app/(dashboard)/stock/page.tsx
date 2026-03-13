@@ -19,10 +19,19 @@ interface Product {
 
 export default function StockPage() {
   const { state: financialState, actions: financialActions } = useFinancial()
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<Product[]>([
+    { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Import Gabon', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100' },
+    { id: '2', name: 'Huile de palme 1L', price: 2500, stock: 8, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Société Palmier' },
+    { id: '3', name: 'Poulet congelé 5kg', price: 15000, stock: 0, minStock: 5, category: 'Viande', lastUpdated: '2024-03-09', status: 'out_of_stock', supplier: 'Gabon Frigorifique' },
+    { id: '4', name: 'Tomates 1kg', price: 2000, stock: 25, minStock: 15, category: 'Légumes', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Maraîcher Local' },
+    { id: '5', name: 'Pain de mie', price: 800, stock: 3, minStock: 10, category: 'Boulangerie', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Boulangerie du Centre' },
+    { id: '6', name: 'Sucre 1kg', price: 1200, stock: 45, minStock: 20, category: 'Épicerie', lastUpdated: '2024-03-08', status: 'in_stock', supplier: 'Sucrierie du Gabon' },
+    { id: '7', name: 'Lait 1L', price: 1800, stock: 12, minStock: 15, category: 'Produits laitiers', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Laiterie Gabonaise' },
+    { id: '8', name: 'Farine 1kg', price: 2500, stock: 30, minStock: 25, category: 'Épicerie', lastUpdated: '2024-03-09', status: 'in_stock', supplier: 'Moulin du Gabon' }
+  ])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [loading, setLoading] = useState(true)
+  // Pas de loading - données disponibles immédiatement
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -42,23 +51,6 @@ export default function StockPage() {
     budgetLineId: '',
     restockCost: ''
   })
-
-  useEffect(() => {
-    setTimeout(() => {
-      const mockProducts: Product[] = [
-        { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Import Gabon', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100' },
-        { id: '2', name: 'Huile de palme 1L', price: 2500, stock: 8, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Société Palmier' },
-        { id: '3', name: 'Sucre local 1kg', price: 1200, stock: 0, minStock: 5, category: 'Alimentaire', lastUpdated: '2024-03-09', status: 'out_of_stock', supplier: 'Sucrière du Gabon' },
-        { id: '4', name: 'Coca-Cola 33cl', price: 300, stock: 100, minStock: 20, category: 'Boissons', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Coca-Cola Gabon', image: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=100' },
-        { id: '5', name: 'Baguette française', price: 800, stock: 25, minStock: 10, category: 'Boulangerie', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Boulangerie Centrale' },
-        { id: '6', name: 'Lait en poudre Nido', price: 3500, stock: 3, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-08', status: 'low_stock', supplier: 'Nestlé Gabon' },
-        { id: '7', name: 'Savon local', price: 500, stock: 60, minStock: 15, category: 'Hygiène', lastUpdated: '2024-03-10', status: 'in_stock' },
-        { id: '8', name: 'Farine de manioc 1kg', price: 1800, stock: 40, minStock: 15, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Producteurs Locaux' }
-      ]
-      setProducts(mockProducts)
-      setLoading(false)
-    }, 100)
-  }, [])
 
   const categories = ['all', ...new Set(products.map(p => p.category))]
 
@@ -230,7 +222,7 @@ export default function StockPage() {
           lastUpdated: new Date().toISOString().split('T')[0]
         }
         setProducts(products.map(p => p.id === selectedProduct.id ? updatedProduct : p))
-        setSelectedProduct(updatedProduct)
+        setShowDetailsModal(false)
       }
     }
   }
@@ -269,17 +261,6 @@ export default function StockPage() {
       default:
         return status
     }
-  }
-
-  if (loading) {
-    return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-            <p className="text-white mt-4">Chargement du stock...</p>
-          </div>
-        </div>
-    )
   }
 
   return (
@@ -537,13 +518,12 @@ export default function StockPage() {
               onClick={() => setShowDetailsModal(false)}
             />
             <div 
-              className="fixed bg-slate-900 backdrop-blur-xl border border-white/20 rounded-lg p-4 w-80 max-h-[80vh] overflow-y-auto shadow-2xl z-50"
-              style={{ 
-                left: `${modalPosition.x}px`, 
-                top: `${modalPosition.y}px`,
-                transform: 'translateX(-50%)'
-              }}
+              className="fixed inset-0 flex items-center justify-center p-4 z-50"
             >
+              <div 
+                className="bg-slate-900 backdrop-blur-xl border border-white/20 rounded-lg p-4 w-full max-w-md max-h-[80vh] overflow-y-auto shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
             {/* Modal Header */}
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center space-x-3">
@@ -626,7 +606,8 @@ export default function StockPage() {
                 Suppr
               </button>
             </div>
-          </div>
+              </div>
+            </div>
           </>
         )}
 
