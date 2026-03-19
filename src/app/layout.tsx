@@ -17,11 +17,11 @@ export const metadata: Metadata = {
   title: 'SmartManager - Gestion Intelligente',
   description: 'Plateforme moderne de gestion pour commerces',
   manifest: '/manifest.json',
-  icons: [
-    { rel: 'apple-touch-icon', sizes: '192x192', url: '/icon-192x192.png' },
-    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/favicon-32x32.png' },
-    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/favicon-16x16.png' }
-  ]
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/logo.png',
+    shortcut: '/favicon.ico'
+  }
 }
 
 export default function RootLayout({
@@ -35,9 +35,9 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.className} antialiased`}>
         <div id="root" className="min-h-screen bg-background text-foreground">
