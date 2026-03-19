@@ -6,9 +6,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // Autoriser les connexions réseau
-  experimental: {
-    serverComponentsExternalPackages: []
-  }
+  serverExternalPackages: []
 };
 
 export default nextConfig;
