@@ -227,6 +227,7 @@ export function useConfirmDialog() {
       // Mettre à jour le config avec les handlers
       setConfig({
         ...config,
+        isOpen: true,
         onConfirm: handleConfirm,
         onClose: handleCancel
       })
@@ -239,9 +240,6 @@ export function useConfirmDialog() {
     
     return (
       <ConfirmDialog
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        onConfirm={() => {}}
         {...config}
       />
     )

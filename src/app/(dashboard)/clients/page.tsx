@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Search, Users, Grid, List, Mail, Phone, Edit, Trash2, TrendingUp, ArrowLeft, MapPin, X } from 'lucide-react'
+import { useTenant } from '@/contexts/TenantContext'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface Customer {
@@ -18,6 +19,10 @@ interface Customer {
 }
 
 export default function ClientsPage() {
+  const tenantData = useTenant()
+  const businessFeatures = tenantData.getBusinessFeatures()
+  const businessType = tenantData.getBusinessLabel()
+  
   const [customers] = useState<Customer[]>([
     {
       id: '1',
@@ -167,8 +172,16 @@ export default function ClientsPage() {
       <div className="p-4">
         {/* Header Mobile-First */}
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Gestion des Clients</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Gestion des Clients</h1>
+            <div className="bg-orange-500/20 backdrop-blur-sm px-3 py-1 rounded-lg">
+              <span className="text-orange-400 text-sm font-medium">{businessType}</span>
+            </div>
+          </div>
           <p className="text-gray-400 text-sm md:text-base">Gestion de la clientèle et suivi des relations</p>
+          {businessFeatures.allowsDebt && (
+            <p className="text-green-400 text-xs mt-2">✓ Gestion des dettes activée</p>
+          )}
         </div>
 
         {/* Stats Cards - Mobile First */}
@@ -194,13 +207,15 @@ export default function ClientsPage() {
             </div>
             <p className="text-gray-400 text-sm mt-2">Clients VIP</p>
           </div>
-          <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <TrendingUp className="h-8 w-8 text-yellow-400" />
-              <span className="text-2xl font-bold text-white">{(totalDebt / 1000).toFixed(0)}k</span>
+          {businessFeatures.allowsDebt && (
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <TrendingUp className="h-8 w-8 text-yellow-400" />
+                <span className="text-2xl font-bold text-white">{(totalDebt / 1000).toFixed(0)}k</span>
+              </div>
+              <p className="text-gray-400 text-sm mt-2">Total Dettes (XAF)</p>
             </div>
-            <p className="text-gray-400 text-sm mt-2">Total Dettes (XAF)</p>
-          </div>
+          )}
         </div>
 
         {/* Search and Filter - Mobile First */}
@@ -275,7 +290,7 @@ export default function ClientsPage() {
                       <span className={`px-2 py-1 text-xs rounded-full border ${getStatusColor(customer.status)}`}>
                         {getStatusText(customer.status)}
                       </span>
-                      {customer.totalDebt > 0 && (
+                      {customer.totalDebt > 0 && businessFeatures.allowsDebt && (
                         <span className="px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
                           Dette
                         </span>

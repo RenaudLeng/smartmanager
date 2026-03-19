@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { 
   User, Store, Bell, Shield, Palette, Smartphone, Save, Eye, EyeOff, Moon, Sun, Mail, ArrowLeft, Users, Key, Lock, Plus, Edit2, Trash2, X 
 } from 'lucide-react'
+import { useTenant } from '@/contexts/TenantContext'
 
 interface AppUser {
   id: string
@@ -46,7 +47,28 @@ interface UserSettings {
   }
 }
 
+interface TenantSettings {
+  name: string
+  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket'
+  email: string
+  phone: string
+  address: string
+  currency: string
+  features: {
+    allowsDebt: boolean
+    allowsDelivery: boolean
+    allowsTableService: boolean
+    requiresTableNumber: boolean
+    allowsFlashCustomers: boolean
+    allowsTicketPrinting: boolean
+  }
+}
+
 export default function SettingsPage() {
+  const tenantData = useTenant()
+  const businessFeatures = tenantData.getBusinessFeatures()
+  const businessType = tenantData.getBusinessLabel()
+  
   const [activeTab, setActiveTab] = useState('user')
   const [showPassword, setShowPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -130,6 +152,24 @@ export default function SettingsPage() {
       settings: false
     },
     status: 'active'
+  })
+
+  // États pour les paramètres du tenant
+  const [tenantSettings, setTenantSettings] = useState<TenantSettings>({
+    name: 'SmartManager Demo',
+    businessType: 'retail',
+    email: 'contact@smartmanager.com',
+    phone: '+241 07 23 45 67',
+    address: 'Libreville, Gabon',
+    currency: 'XAF',
+    features: {
+      allowsDebt: false,
+      allowsDelivery: false,
+      allowsTableService: false,
+      requiresTableNumber: false,
+      allowsFlashCustomers: false,
+      allowsTicketPrinting: false
+    }
   })
 
   const tabs = [
@@ -373,15 +413,31 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Nom du commerce</label>
                     <input
                       type="text"
-                      defaultValue="Supermarché Libreville"
+                      value={tenantSettings.name}
+                      onChange={(e) => setTenantSettings({...tenantSettings, name: e.target.value})}
                       className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Adresse</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Type de commerce</label>
+                    <select
+                      value={tenantSettings.businessType}
+                      onChange={(e) => setTenantSettings({...tenantSettings, businessType: e.target.value as TenantSettings['businessType']})}
+                      className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="retail">Boutique</option>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="bar">Bar</option>
+                      <option value="pharmacy">Pharmacie</option>
+                      <option value="supermarket">Supermarché</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
                     <input
-                      type="text"
-                      defaultValue="Boulevard de la Mer, Libreville"
+                      type="email"
+                      value={tenantSettings.email}
+                      onChange={(e) => setTenantSettings({...tenantSettings, email: e.target.value})}
                       className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -389,11 +445,130 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Téléphone</label>
                     <input
                       type="tel"
-                      defaultValue="+241 01 23 45 67"
+                      value={tenantSettings.phone}
+                      onChange={(e) => setTenantSettings({...tenantSettings, phone: e.target.value})}
+                      className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Adresse</label>
+                    <input
+                      type="text"
+                      value={tenantSettings.address}
+                      onChange={(e) => setTenantSettings({...tenantSettings, address: e.target.value})}
                       className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Fonctionnalités selon type de commerce */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Fonctionnalités activées</h3>
+                <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Gestion des dettes clients</p>
+                        <p className="text-gray-400 text-xs">Permet d'enregistrer les dettes des clients fidèles</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={tenantSettings.features.allowsDebt}
+                        onChange={(e) => setTenantSettings({
+                          ...tenantSettings, 
+                          features: {...tenantSettings.features, allowsDebt: e.target.checked}
+                        })}
+                        className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Service de livraison</p>
+                        <p className="text-gray-400 text-xs">Gestion des livraisons à domicile</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={tenantSettings.features.allowsDelivery}
+                        onChange={(e) => setTenantSettings({
+                          ...tenantSettings, 
+                          features: {...tenantSettings.features, allowsDelivery: e.target.checked}
+                        })}
+                        className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Service de table</p>
+                        <p className="text-gray-400 text-xs">Gestion des tables et service restaurant</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={tenantSettings.features.allowsTableService}
+                        onChange={(e) => setTenantSettings({
+                          ...tenantSettings, 
+                          features: {...tenantSettings.features, allowsTableService: e.target.checked}
+                        })}
+                        className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Numéro de table requis</p>
+                        <p className="text-gray-400 text-xs">Oblige le numéro de table pour chaque commande</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={tenantSettings.features.requiresTableNumber}
+                        onChange={(e) => setTenantSettings({
+                          ...tenantSettings, 
+                          features: {...tenantSettings.features, requiresTableNumber: e.target.checked}
+                        })}
+                        className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Clients flash</p>
+                        <p className="text-gray-400 text-xs">Système de crédit pour clients réguliers</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={tenantSettings.features.allowsFlashCustomers}
+                        onChange={(e) => setTenantSettings({
+                          ...tenantSettings, 
+                          features: {...tenantSettings.features, allowsFlashCustomers: e.target.checked}
+                        })}
+                        className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Impression tickets</p>
+                        <p className="text-gray-400 text-xs">Impression automatique des tickets de caisse</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={tenantSettings.features.allowsTicketPrinting}
+                        onChange={(e) => setTenantSettings({
+                          ...tenantSettings, 
+                          features: {...tenantSettings.features, allowsTicketPrinting: e.target.checked}
+                        })}
+                        className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => showNotification('success', 'Paramètres du commerce sauvegardés!')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Sauvegarder</span>
+                </button>
               </div>
             </div>
           )}

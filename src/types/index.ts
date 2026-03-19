@@ -290,6 +290,7 @@ export const BUSINESS_TYPES_CONFIG: Record<string, BusinessTypeConfig> = {
 }
 
 export const PERMISSIONS = {
+  // Permissions existantes
   CREATE_PRODUCT: 'create_product',
   UPDATE_PRODUCT: 'update_product',
   DELETE_PRODUCT: 'delete_product',
@@ -300,12 +301,35 @@ export const PERMISSIONS = {
   MANAGE_STOCK: 'manage_stock',
   MANAGE_CLIENTS: 'manage_clients',
   MANAGE_SUPPLIERS: 'manage_suppliers',
-  MANAGE_STAFF: 'manage_staff'
+  MANAGE_STAFF: 'manage_staff',
+  
+  // Permissions SuperAdmin
+  CREATE_TENANT: 'create_tenant',
+  UPDATE_TENANT: 'update_tenant',
+  DELETE_TENANT: 'delete_tenant',
+  SUSPEND_TENANT: 'suspend_tenant',
+  VIEW_ALL_TENANTS: 'view_all_tenants',
+  MANAGE_SUBSCRIPTIONS: 'manage_subscriptions',
+  VIEW_GLOBAL_REPORTS: 'view_global_reports',
+  MANAGE_SYSTEM_CONFIG: 'manage_system_config',
+  VIEW_AUDIT_LOGS: 'view_audit_logs'
 } as const
 
 export const ROLE_PERMISSIONS = {
   super_admin: Object.values(PERMISSIONS),
-  admin: Object.values(PERMISSIONS),
+  admin: [
+    PERMISSIONS.CREATE_PRODUCT,
+    PERMISSIONS.UPDATE_PRODUCT,
+    PERMISSIONS.DELETE_PRODUCT,
+    PERMISSIONS.CREATE_SALE,
+    PERMISSIONS.MANAGE_EXPENSES,
+    PERMISSIONS.MANAGE_USERS,
+    PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.MANAGE_STOCK,
+    PERMISSIONS.MANAGE_CLIENTS,
+    PERMISSIONS.MANAGE_SUPPLIERS,
+    PERMISSIONS.MANAGE_STAFF
+  ],
   manager: [
     PERMISSIONS.CREATE_PRODUCT,
     PERMISSIONS.UPDATE_PRODUCT,
@@ -327,6 +351,78 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.MANAGE_CLIENTS
   ]
 } as const
+
+// Types SuperAdmin
+export interface SuperAdminUser {
+  id: string
+  email: string
+  name: string
+  role: 'super_admin'
+  permissions: Permission[]
+  lastLogin?: Date
+  createdAt: Date
+  status: 'active' | 'inactive'
+}
+
+export interface TenantStats {
+  id: string
+  name: string
+  businessType: string
+  status: 'active' | 'suspended' | 'inactive'
+  createdAt: Date
+  lastActive?: Date
+  userCount: number
+  todaySales: number
+  monthSales: number
+  totalSales: number
+  subscriptionPlan: 'free' | 'premium' | 'enterprise'
+  storageUsed: number
+  storageLimit: number
+}
+
+export interface GlobalStats {
+  totalTenants: number
+  activeTenants: number
+  totalUsers: number
+  totalSales: number
+  todaySales: number
+  monthSales: number
+  newTenantsThisMonth: number
+  topBusinessTypes: { type: string; count: number; percentage: number }[]
+  growthRate: number
+}
+
+export interface AuditLog {
+  id: string
+  action: string
+  entity: string
+  entityId: string
+  userId: string
+  userName: string
+  tenantId?: string
+  tenantName?: string
+  timestamp: Date
+  ipAddress?: string
+  userAgent?: string
+  details?: any
+}
+
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  price: number
+  currency: string
+  billingCycle: 'monthly' | 'yearly'
+  features: {
+    maxUsers: number
+    maxProducts: number
+    maxStorage: number // in MB
+    advancedReports: boolean
+    multiStore: boolean
+    apiAccess: boolean
+    prioritySupport: boolean
+  }
+}
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS]
 export type Role = keyof typeof ROLE_PERMISSIONS

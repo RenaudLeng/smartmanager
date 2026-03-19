@@ -14,9 +14,22 @@ interface User {
   tenant: Tenant
 }
 
+interface SuperAdminUser {
+  id: string
+  email: string
+  name: string
+  role: 'super_admin'
+  permissions: string[]
+  lastLogin?: Date
+  createdAt: Date
+  status: 'active' | 'inactive'
+}
+
 interface TenantContextType {
   tenant: Tenant | null
   user: User | null
+  superAdminUser: SuperAdminUser | null
+  isSuperAdmin: boolean
   isLoading: boolean
   getPaymentMethods: () => string[]
   getBusinessLabel: () => string
@@ -28,6 +41,8 @@ interface TenantContextType {
     allowsFlashCustomers: boolean
     allowsTicketPrinting: boolean
   }
+  switchToTenant: (tenantId: string) => void
+  switchToSuperAdmin: () => void
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)

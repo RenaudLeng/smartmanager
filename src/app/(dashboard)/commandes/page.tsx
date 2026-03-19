@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Edit2, Trash2, ShoppingCart, Truck, Calendar, Edit, Grid, List } from 'lucide-react'
+import { Search, Edit2, Trash2, ShoppingCart, Truck, Calendar, Edit, Grid, List, Users, Clock, CheckCircle } from 'lucide-react'
+import { useTenant } from '@/contexts/TenantContext'
 
 interface Order {
   id: string
@@ -30,7 +31,28 @@ interface OrderItem {
   notes: string
 }
 
+interface Table {
+  id: string
+  number: string
+  capacity: number
+  status: 'available' | 'occupied' | 'reserved' | 'cleaning'
+  currentOrder?: string
+}
+
 export default function CommandesPage() {
+  const tenantData = useTenant()
+  const businessFeatures = tenantData.getBusinessFeatures()
+  const businessType = tenantData.getBusinessLabel()
+  
+  // Tables pour restaurant
+  const [tables] = useState<Table[]>([
+    { id: '1', number: 'T1', capacity: 4, status: 'available' },
+    { id: '2', number: 'T2', capacity: 2, status: 'occupied', currentOrder: 'CMD-2024-001' },
+    { id: '3', number: 'T3', capacity: 6, status: 'reserved' },
+    { id: '4', number: 'T4', capacity: 4, status: 'available' },
+    { id: '5', number: 'T5', capacity: 8, status: 'occupied', currentOrder: 'CMD-2024-002' },
+    { id: '6', number: 'T6', capacity: 2, status: 'cleaning' }
+  ])
   // Optimisé : données mock chargées directement sans délai artificiel
   const [orders] = useState<Order[]>([
     {
@@ -95,6 +117,7 @@ export default function CommandesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders')
 
   const filteredOrders = orders.filter(order =>
     order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -156,12 +179,51 @@ export default function CommandesPage() {
     <div className="p-4">
       {/* Header Mobile-First */}
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Gestion des Commandes</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Gestion des Commandes</h1>
+          <div className="bg-orange-500/20 backdrop-blur-sm px-3 py-1 rounded-lg">
+            <span className="text-orange-400 text-sm font-medium">{businessType}</span>
+          </div>
+        </div>
         <p className="text-gray-400 text-sm md:text-base">Suivi des commandes et livraisons</p>
+        {businessFeatures.allowsTableService && (
+          <p className="text-green-400 text-xs mt-2">✓ Service de table activé</p>
+        )}
       </div>
 
-      {/* Stats Cards - Mobile First */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {/* Tabs pour Restaurant */}
+      {businessFeatures.allowsTableService && (
+        <div className="flex space-x-1 mb-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'orders'
+                ? 'bg-orange-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span>Commandes</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('tables')}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'tables'
+                ? 'bg-orange-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Tables</span>
+          </button>
+        </div>
+      )}
+
+      {/* Contenu selon l'onglet actif */}
+      {activeTab === 'orders' ? (
+        <>
+          {/* Stats Cards - Mobile First */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <ShoppingCart className="h-8 w-8 text-orange-400" />
@@ -326,6 +388,93 @@ export default function CommandesPage() {
               : 'Commencez par ajouter une nouvelle commande'
             }
           </p>
+        </div>
+      )}
+        </>
+      ) : (
+        /* Section Tables pour Restaurant */
+        <div>
+          {/* Stats Tables */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <Users className="h-8 w-8 text-blue-400" />
+                <span className="text-2xl font-bold text-white">{tables.length}</span>
+              </div>
+              <p className="text-gray-400 text-sm mt-2">Total Tables</p>
+            </div>
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <CheckCircle className="h-8 w-8 text-green-400" />
+                <span className="text-2xl font-bold text-white">
+                  {tables.filter(t => t.status === 'available').length}
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mt-2">Disponibles</p>
+            </div>
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <Clock className="h-8 w-8 text-orange-400" />
+                <span className="text-2xl font-bold text-white">
+                  {tables.filter(t => t.status === 'occupied').length}
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mt-2">Occupées</p>
+            </div>
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <Calendar className="h-8 w-8 text-purple-400" />
+                <span className="text-2xl font-bold text-white">
+                  {tables.filter(t => t.status === 'reserved').length}
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mt-2">Réservées</p>
+            </div>
+          </div>
+
+          {/* Grid des Tables */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {tables.map((table) => (
+              <div 
+                key={table.id}
+                className={`bg-black/40 backdrop-blur-md border rounded-lg p-4 cursor-pointer transition-all hover:border-orange-500 ${
+                  table.status === 'available' ? 'border-green-500/30' :
+                  table.status === 'occupied' ? 'border-red-500/30' :
+                  table.status === 'reserved' ? 'border-yellow-500/30' :
+                  'border-gray-500/30'
+                }`}
+              >
+                <div className="text-center">
+                  <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center ${
+                    table.status === 'available' ? 'bg-green-500/20 text-green-400' :
+                    table.status === 'occupied' ? 'bg-red-500/20 text-red-400' :
+                    table.status === 'reserved' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    <Users className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-white font-bold text-lg mb-1">{table.number}</h3>
+                  <p className="text-gray-400 text-sm">{table.capacity} personnes</p>
+                  <p className={`text-xs mt-2 px-2 py-1 rounded-full ${
+                    table.status === 'available' ? 'bg-green-500/20 text-green-400' :
+                    table.status === 'occupied' ? 'bg-red-500/20 text-red-400' :
+                    table.status === 'reserved' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {table.status === 'available' ? 'Disponible' :
+                     table.status === 'occupied' ? 'Occupée' :
+                     table.status === 'reserved' ? 'Réservée' :
+                     'Nettoyage'}
+                  </p>
+                  {table.currentOrder && (
+                    <p className="text-orange-400 text-xs mt-1">
+                      Commande: {table.currentOrder}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

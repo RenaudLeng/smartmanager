@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, AlertTriangle, Wallet, ArrowUp, ArrowDown, Plus, Package, Calculator } from 'lucide-react'
+import { useTenant } from '@/contexts/TenantContext'
 import { SmartAlerts } from '@/components/Notifications/SmartAlerts'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -138,18 +139,41 @@ function LowStockAlert({ products }: { products: DashboardStats['topProducts'] }
 
 export default function DashboardPage() {
   const router = useRouter()
+  const tenantData = useTenant()
+  const businessType = tenantData.getBusinessLabel()
+  const businessFeatures = tenantData.getBusinessFeatures()
+  
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   
   const { showNotification, NotificationComponent } = useNotifications()
   const { ConfirmDialogComponent } = useConfirmDialog()
 
-  // Actions rapides
+  // Actions rapides adaptées selon le type de commerce
   const quickActions = [
     { icon: <Plus className="h-5 w-5" />, label: 'POS', action: () => router.push('/pos'), color: 'bg-green-500 hover:bg-green-600' },
     { icon: <Package className="h-5 w-5" />, label: 'Stock', action: () => router.push('/stock'), color: 'bg-blue-500 hover:bg-blue-600' },
     { icon: <Calculator className="h-5 w-5" />, label: 'Dépenses', action: () => router.push('/depenses'), color: 'bg-red-500 hover:bg-red-600' }
   ]
+
+  // Actions supplémentaires selon les fonctionnalités
+  if (businessFeatures.allowsTableService) {
+    quickActions.push({ 
+      icon: <Users className="h-5 w-5" />, 
+      label: 'Tables', 
+      action: () => router.push('/commandes'), 
+      color: 'bg-purple-500 hover:bg-purple-600' 
+    })
+  }
+
+  if (businessFeatures.allowsDebt) {
+    quickActions.push({ 
+      icon: <Wallet className="h-5 w-5" />, 
+      label: 'Clients', 
+      action: () => router.push('/clients'), 
+      color: 'bg-orange-500 hover:bg-orange-600' 
+    })
+  }
 
   useEffect(() => {
     async function fetchStats() {
@@ -205,7 +229,12 @@ export default function DashboardPage() {
       {/* Barre d'actions rapides - Même ligne que les notifications */}
       <div className="bg-black/40 backdrop-blur-md rounded-xl p-3 shadow-xl border border-white/10 mb-6">
         <div className="flex items-center justify-between">
-          <div className="text-white font-semibold">Tableau de bord</div>
+          <div className="flex items-center space-x-3">
+            <div className="text-white font-semibold">Tableau de bord</div>
+            <div className="bg-orange-500/20 backdrop-blur-sm px-3 py-1 rounded-lg">
+              <span className="text-orange-400 text-sm font-medium">{businessType}</span>
+            </div>
+          </div>
           <div className="flex items-center space-x-2">
             {quickActions.map((action, index) => (
               <button
@@ -223,7 +252,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid - Mobile First */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Ventes du jour"
           value={`${(stats.todaySales / 1000).toFixed(1)}k XAF`}
@@ -240,36 +269,31 @@ export default function DashboardPage() {
           color="bg-gradient-to-r from-orange-500 to-orange-600"
         />
         
+        {/* Carte conditionnelle selon les fonctionnalités */}
+        {businessFeatures.allowsDebt ? (
+          <StatCard
+            title="Dettes clients"
+            value={`${(stats.customerDebts / 1000).toFixed(1)}k XAF`}
+            change={-5.2}
+            icon={<Wallet className="h-6 w-6" />}
+            color="bg-gradient-to-r from-purple-500 to-purple-600"
+          />
+        ) : (
+          <StatCard
+            title="Solde caisse"
+            value={`${(stats.cashBalance / 1000).toFixed(1)}k XAF`}
+            change={3.1}
+            icon={<Wallet className="h-6 w-6" />}
+            color="bg-gradient-to-r from-blue-500 to-blue-600"
+          />
+        )}
+        
         <StatCard
-          title="Dépenses"
-          value={`${(stats.todayExpenses / 1000).toFixed(1)}k XAF`}
-          change={-5.2}
-          icon={<TrendingDown className="h-6 w-6" />}
+          title="Produits en stock"
+          value={stats.totalProducts}
+          change={-2.1}
+          icon={<Package className="h-6 w-6" />}
           color="bg-gradient-to-r from-red-500 to-red-600"
-        />
-        
-        <StatCard
-          title="Stock bas"
-          value={stats.lowStockProducts}
-          change={-15}
-          icon={<AlertTriangle className="h-6 w-6" />}
-          color="bg-gradient-to-r from-yellow-500 to-orange-500"
-        />
-        
-        <StatCard
-          title="Dettes clients"
-          value={`${(stats.customerDebts / 1000).toFixed(1)}k XAF`}
-          change={3.1}
-          icon={<Users className="h-6 w-6" />}
-          color="bg-gradient-to-r from-purple-500 to-purple-600"
-        />
-        
-        <StatCard
-          title="Solde caisse"
-          value={`${(stats.cashBalance / 1000).toFixed(1)}k XAF`}
-          change={2.4}
-          icon={<Wallet className="h-6 w-6" />}
-          color="bg-gradient-to-r from-emerald-500 to-green-600"
         />
       </div>
 

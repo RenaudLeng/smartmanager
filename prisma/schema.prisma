@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model Tenant {
@@ -270,7 +271,7 @@ model Subscription {
   startDate         DateTime
   endDate           DateTime
   status            String   // active, expired, cancelled
-  features          String[] // JSON array of features
+  features          String   // JSON string of features
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -288,7 +289,7 @@ model Notification {
   userId            String?
   tenantId          String
   isRead            Boolean  @default(false)
-  data              Json?    // Additional notification data
+  data              String?  // Additional notification data as JSON string
   createdAt         DateTime @default(now())
 
   @@map("notifications")

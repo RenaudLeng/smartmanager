@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
+import { useTenant } from '@/contexts/TenantContext'
 import { 
   LayoutDashboard, 
   DollarSign, 
@@ -9,7 +10,6 @@ import {
   Users, 
   Settings, 
   LogOut,
-  Store,
   Building2,
   Shield,
   ShoppingCart,
@@ -39,6 +39,8 @@ interface NavigationProps {
 export default function Navigation({ user, isMobile = false, onCloseMobile }: NavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const tenantData = useTenant()
+  const businessFeatures = tenantData.getBusinessFeatures()
 
   const navigation = [
     {
@@ -112,12 +114,53 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
       href: '/settings',
       icon: Settings,
       roles: ['super_admin', 'admin']
+    },
+    {
+      name: 'SuperAdmin',
+      href: '/superadmin',
+      icon: Shield,
+      roles: ['super_admin']
     }
   ]
 
-  const filteredNavigation = navigation.filter(item => 
-    user?.role && item.roles.includes(user.role)
-  )
+  // Filtrer la navigation selon les fonctionnalités du business
+  const filteredNavigation = navigation.filter(item => {
+    // Vérifier les permissions de rôle
+    const hasRoleAccess = user?.role && item.roles.includes(user.role)
+    
+    // Vérifier les fonctionnalités spécifiques au type de commerce
+    if (!hasRoleAccess) return false
+    
+    // Exemples de filtrage selon les fonctionnalités
+    switch (item.name) {
+      case 'Caisse':
+        // La caisse est disponible pour tous les types de commerce
+        return true
+      case 'Trésorerie':
+        // La trésorerie est disponible pour tous les types de commerce
+        return true
+      case 'Stock':
+        // Le stock est disponible pour tous les types de commerce
+        return true
+      case 'Clients':
+        // La gestion des clients avec dettes n'est disponible que pour restaurant/bar
+        if (item.name === 'Clients' && !businessFeatures.allowsDebt) {
+          return false
+        }
+        return true
+      case 'Commandes':
+        // Les commandes (service de table) ne sont que pour restaurant
+        if (item.name === 'Commandes' && !businessFeatures.allowsTableService) {
+          return false
+        }
+        return true
+      case 'Fournisseurs':
+        // Les fournisseurs sont pour tous les types
+        return true
+      default:
+        return true
+    }
+  })
 
   const handleLogout = () => {
     localStorage.removeItem('token')

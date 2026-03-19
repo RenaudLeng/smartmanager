@@ -44,6 +44,16 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
+      {/* Lien d'accès SuperAdmin */}
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={() => router.push('/superadmin')}
+          className="bg-slate-800/90 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-lg text-xs font-medium transition-colors border border-slate-600"
+        >
+          SuperAdmin
+        </button>
+      </div>
+      
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
