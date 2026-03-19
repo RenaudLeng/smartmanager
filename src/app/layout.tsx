@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   description: 'Plateforme moderne de gestion pour commerces',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
-    apple: '/logo.png',
-    shortcut: '/favicon.ico'
+    icon: '/favicon.svg',
+    apple: '/apple-touch-icon.svg',
+    shortcut: '/favicon.svg'
   }
 }
 
@@ -35,9 +35,9 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-icon" href="/logo.png" />
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+        <link rel="icon" href="/favicon.svg" />
+        <link rel="shortcut icon" href="/favicon.svg" />
       </head>
       <body className={`${inter.className} antialiased`}>
         <div id="root" className="min-h-screen bg-background text-foreground">
