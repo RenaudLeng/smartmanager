@@ -41,70 +41,40 @@ export default function POSPage() {
   const tenantData = useTenant()
   const businessType = tenantData.getBusinessLabel()
   
-  // Initialize products data directly in useState to avoid useEffect
-  const [products] = useState<Product[]>(() => {
-    // Products adaptés selon le type de commerce
-    switch (businessType) {
-      case 'Restaurant':
-        return [
-          { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, category: 'Plats principaux', barcode: '9782010123456' },
-          { id: '2', name: 'Poulet braisé', price: 3500, stock: 30, category: 'Plats principaux', barcode: '9782010123457' },
-          { id: '3', name: 'Attiéké', price: 2000, stock: 45, category: 'Plats principaux', barcode: '9782010123458' },
-          { id: '4', name: 'Coca-Cola 33cl', price: 300, stock: 100, category: 'Boissons', barcode: '5449000000996' },
-          { id: '5', name: 'Jus de fruit frais', price: 500, stock: 25, category: 'Boissons', barcode: '9782010123459' },
-          { id: '6', name: 'Eau minérale 1.5L', price: 400, stock: 15, category: 'Boissons', barcode: '9782010123460' },
-          { id: '7', name: 'Salade composée', price: 1200, stock: 60, category: 'Entrées', barcode: '9782010123461' },
-          { id: '8', name: 'Pain', price: 200, stock: 40, category: 'Accompagnements', barcode: '9782010123462' }
-        ]
-      case 'Bar':
-        return [
-          { id: '1', name: 'Coca-Cola 33cl', price: 300, stock: 100, category: 'Boissons sans alcool' },
-          { id: '2', name: 'Heineken 33cl', price: 800, stock: 30, category: 'Bières' },
-          { id: '3', name: 'Vin rouge local', price: 2500, stock: 45, category: 'Vins' },
-          { id: '4', name: 'Whisky', price: 5000, stock: 25, category: 'Spirits' },
-          { id: '5', name: 'Jus de fruit', price: 500, stock: 25, category: 'Boissons sans alcool' },
-          { id: '6', name: 'Cocktail maison', price: 1500, stock: 15, category: 'Cocktails' },
-          { id: '7', name: 'Arachides grillées', price: 500, stock: 60, category: 'Snacks' },
-          { id: '8', name: 'Chips', price: 300, stock: 40, category: 'Snacks' }
-        ]
-      case 'Pharmacie':
-        return [
-          { id: '1', name: 'Paracétamol 500mg', price: 500, stock: 50, category: 'Médicaments' },
-          { id: '2', name: 'Vitamine C', price: 1500, stock: 30, category: 'Vitamines' },
-          { id: '3', name: 'Bandage', price: 200, stock: 45, category: 'Pansements' },
-          { id: '4', name: 'Masques chirurgicaux', price: 100, stock: 100, category: 'Équipement médical' },
-          { id: '5', name: 'Thermomètre', price: 2500, stock: 25, category: 'Équipement médical' },
-          { id: '6', name: 'Solution saline', price: 800, stock: 15, category: 'Produits soins' },
-          { id: '7', name: 'Savon antiseptique', price: 600, stock: 60, category: 'Hygiène' },
-          { id: '8', name: 'Gants en latex', price: 400, stock: 40, category: 'Équipement médical' }
-        ]
-      case 'Supermarché':
-        return [
-          { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, category: 'Alimentaire' },
-          { id: '2', name: 'Huile de palme 1L', price: 2500, stock: 30, category: 'Alimentaire' },
-          { id: '3', name: 'Sucre local 1kg', price: 1200, stock: 45, category: 'Alimentaire' },
-          { id: '4', name: 'Coca-Cola 33cl', price: 300, stock: 100, category: 'Boissons' },
-          { id: '5', name: 'Baguette française', price: 800, stock: 25, category: 'Boulangerie' },
-          { id: '6', name: 'Lait en poudre Nido', price: 3500, stock: 15, category: 'Produits laitiers' },
-          { id: '7', name: 'Savon local', price: 500, stock: 60, category: 'Hygiène' },
-          { id: '8', name: 'Farine de manioc 1kg', price: 1800, stock: 40, category: 'Alimentaire' },
-          { id: '9', name: 'Produit ménager', price: 2000, stock: 20, category: 'Entretien' },
-          { id: '10', name: 'Piles AA', price: 300, stock: 50, category: 'Électronique' }
-        ]
-      case 'Boutique':
-      default:
-        return [
-          { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, category: 'Alimentaire' },
-          { id: '2', name: 'Huile de palme 1L', price: 2500, stock: 30, category: 'Alimentaire' },
-          { id: '3', name: 'Sucre local 1kg', price: 1200, stock: 45, category: 'Alimentaire' },
-          { id: '4', name: 'Coca-Cola 33cl', price: 300, stock: 100, category: 'Boissons' },
-          { id: '5', name: 'Baguette française', price: 800, stock: 25, category: 'Boulangerie' },
-          { id: '6', name: 'Lait en poudre Nido', price: 3500, stock: 15, category: 'Alimentaire' },
-          { id: '7', name: 'Savon local', price: 500, stock: 60, category: 'Hygiène' },
-          { id: '8', name: 'Farine de manioc 1kg', price: 1800, stock: 40, category: 'Alimentaire' }
-        ]
+  // Initialize products data from API
+  const [products, setProducts] = useState<Product[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  
+  // Load products from API
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch('/api/products', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setProducts(data.data || [])
+        } else {
+          console.error('Erreur lors du chargement des produits')
+          setProducts([])
+        }
+      } catch (error) {
+        console.error('Erreur:', error)
+        setProducts([])
+      } finally {
+        setProductsLoading(false)
+      }
     }
-  })
+    
+    loadProducts()
+  }, [])
+  
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')

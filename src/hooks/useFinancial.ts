@@ -10,76 +10,6 @@ import {
   FinancialReport 
 } from '@/types/financial'
 
-// Mock data pour développement
-const mockBudgetLines: BudgetLine[] = [
-  {
-    id: '1',
-    name: 'Fonds propres initiaux',
-    type: 'funds',
-    initialAmount: 1000000,
-    currentAmount: 850000,
-    currency: 'XAF',
-    createdAt: '2024-01-01',
-    description: 'Investissement personnel de départ'
-  },
-  {
-    id: '2',
-    name: 'Prêt bancaire BGFIBank',
-    type: 'loan',
-    initialAmount: 500000,
-    currentAmount: 450000,
-    currency: 'XAF',
-    createdAt: '2024-01-15',
-    description: 'Prêt pour expansion',
-    loanDetails: {
-      lender: 'BGFIBank',
-      interestRate: 8.5,
-      totalAmount: 500000,
-      monthlyPayment: 25000,
-      remainingPayments: 18,
-      nextPaymentDate: '2024-04-01',
-      startDate: '2024-01-15'
-    }
-  }
-]
-
-const mockTransactions: FinancialTransaction[] = [
-  {
-    id: '1',
-    type: 'income',
-    amount: 150000,
-    currency: 'XAF',
-    description: 'Ventes journalières',
-    category: 'ventes',
-    date: '2024-03-10',
-    source: { type: 'cash' },
-    relatedEntity: {
-      type: 'sale',
-      entityId: 'sale_1',
-      entityName: 'Ventes du jour'
-    },
-    createdAt: '2024-03-10T10:00:00Z',
-    updatedAt: '2024-03-10T10:00:00Z'
-  },
-  {
-    id: '2',
-    type: 'expense',
-    amount: 50000,
-    currency: 'XAF',
-    description: 'Ravitaillement stock',
-    category: 'restock',
-    date: '2024-03-10',
-    source: { type: 'cash' },
-    relatedEntity: {
-      type: 'restock',
-      entityId: 'restock_1',
-      entityName: 'Achat produits'
-    },
-    createdAt: '2024-03-10T09:00:00Z',
-    updatedAt: '2024-03-10T09:00:00Z'
-  }
-]
-
 export function useFinancial(): UseFinancialReturn {
   const [state, setState] = useState<FinancialState>({
     budgetLines: [],
@@ -90,33 +20,52 @@ export function useFinancial(): UseFinancialReturn {
     error: null
   })
 
-  // Initialisation des données
+  // Load data from API
   useEffect(() => {
-    const initializeData = async () => {
+    async function loadData() {
       try {
-        setState(prev => ({ ...prev, loading: true }))
+        const token = localStorage.getItem('token')
         
-        // Simuler un appel API
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Load budget lines
+        const budgetResponse = await fetch('/api/financial/budget-lines', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
         
+        // Load transactions
+        const transactionsResponse = await fetch('/api/financial/transactions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        // Load metrics
+        const metricsResponse = await fetch('/api/financial/metrics', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        const [budgetData, transactionsData, metricsData] = await Promise.all([
+          budgetResponse.json(),
+          transactionsResponse.json(),
+          metricsResponse.json()
+        ])
+
         setState({
-          budgetLines: mockBudgetLines,
-          transactions: mockTransactions,
-          metrics: calculateMetrics(mockBudgetLines, mockTransactions),
+          budgetLines: budgetData.data || [],
+          transactions: transactionsData.data || [],
+          metrics: metricsData.data || null,
           reports: [],
           loading: false,
           error: null
         })
       } catch (error) {
+        console.error('Erreur lors du chargement des données financières:', error)
         setState(prev => ({
           ...prev,
           loading: false,
-          error: 'Erreur lors du chargement des données financières'
+          error: 'Erreur lors du chargement des données'
         }))
       }
     }
 
-    initializeData()
+    loadData()
   }, [])
 
   // Calcul des métriques financières
