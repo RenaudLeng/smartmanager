@@ -65,8 +65,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Charger les infos utilisateur depuis localStorage
-    const userData = localStorage.getItem('user')
+    const userData = localStorage.getItem('userData')
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData)
@@ -74,21 +73,20 @@ export function TenantProvider({ children }: TenantProviderProps) {
         setTenant(parsedUser.tenant)
       } catch (error) {
         console.error('Error parsing user data:', error)
+        localStorage.removeItem('userData')
       }
     }
-    setIsLoading(false)
   }, [])
 
   useEffect(() => {
-    // Charger les infos utilisateur depuis localStorage
-    const userData = localStorage.getItem('user')
-    if (userData) {
+    const tenantData = localStorage.getItem('tenantData')
+    if (tenantData) {
       try {
-        const parsedUser = JSON.parse(userData)
-        setUser(parsedUser)
-        setTenant(parsedUser.tenant)
+        const parsedTenant = JSON.parse(tenantData)
+        setTenant(parsedTenant)
       } catch (error) {
-        console.error('Error parsing user data:', error)
+        console.error('Error parsing tenant data:', error)
+        localStorage.removeItem('tenantData')
       }
     }
     setIsLoading(false)

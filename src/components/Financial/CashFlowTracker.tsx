@@ -8,6 +8,8 @@ import { FinancialTransaction } from '@/types/financial'
 export function CashFlowTracker() {
   const { state, actions } = useFinancial()
   const [showModal, setShowModal] = useState(false)
+  
+  const generateId = () => Math.random().toString(36).substr(2, 9)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
   const [filterSource, setFilterSource] = useState<'all' | 'cash' | 'budget_line' | 'bank_transfer'>('all')
@@ -53,7 +55,7 @@ export function CashFlowTracker() {
         },
         relatedEntity: formData.entityName ? {
           type: formData.relatedEntityType,
-          entityId: Date.now().toString(),
+          entityId: generateId(),
           entityName: formData.entityName
         } : undefined,
         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : undefined
