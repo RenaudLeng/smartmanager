@@ -37,6 +37,8 @@ interface GlobalStats {
   newTenantsThisMonth: number
   monthlyRevenue?: number
   activityRate?: number
+  monthlyGrowth?: number
+  averageTransactionValue?: number
 }
 
 const handleUserAction = (action: string, userId: string, data?: unknown) => {

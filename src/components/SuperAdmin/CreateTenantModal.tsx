@@ -52,15 +52,37 @@ export default function CreateTenantModal({ isOpen, onClose, onSubmit }: CreateT
   const [isAiLoading, setIsAiLoading] = useState(false)
 
   // Fonctions IA pour suggestions intelligentes
-  const generateAiSuggestions = useCallback(async (businessType: string) => {
+  const generateAiSuggestions = (businessType: string, businessName: string) => {
+    console.log(`Generating AI suggestions for ${businessType}: ${businessName}`)
+    // Simulation de suggestions IA
     setIsAiLoading(true)
     try {
       // Simulation d'API IA - remplacer avec vrai appel API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const suggestions = {
-        retail: [
-          'Produits locaux populaires: Manioc, Poisson fumé, Lait concentré',
+      new Promise(resolve => setTimeout(resolve, 1000))
+      .then(() => {
+        const suggestions = {
+          retail: [
+            'Produits locaux populaires: Manioc, Poisson fumé, Lait concentré',
+            'Heures de pointe: 8h-10h et 17h-19h',
+            'Zone de livraison: 5km rayon recommandé'
+          ],
+          bar: [
+            'Promotions: Happy hour 18h-20h, Soirées week-end',
+            'Stock prioritaire: Bières locales, Spiritueux importés',
+            'Événements: Matchs football, Musique live'
+          ],
+          restaurant: [
+            'Menu du jour: Plats locaux + accompagnement',
+            'Livraison: Plateformes partenaires recommandées',
+            'Personnel: 1 cuisinier + 2 serveurs minimum'
+          ]
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          aiSuggestions: suggestions[businessType as keyof typeof suggestions] || []
+        }))
+      })
           'Heures de pointe: 8h-10h et 17h-19h',
           'Zone de livraison: 5km rayon recommandé'
         ],
