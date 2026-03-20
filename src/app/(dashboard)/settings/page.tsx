@@ -191,7 +191,7 @@ export default function SettingsPage() {
     } else {
       document.body.classList.remove('dark')
     }
-    
+
     // Appliquer la langue
     document.documentElement.lang = settings.preferences.language
     
@@ -199,6 +199,32 @@ export default function SettingsPage() {
     setTimeout(() => {
       showNotification('info', 'Toutes les modifications ont été enregistrées')
     }, 1000)
+  }
+
+  const handleResetData = async () => {
+    if (confirm('⚠️ ATTENTION ! Cette action va supprimer TOUTES vos données :\n\n- Ventes et transactions\n- Produits et stock\n- Dépenses et finances\n- Utilisateurs et paramètres\n\nCette action est IRRÉVERSIBLE !\n\nÊtes-vous sûr de vouloir continuer ?')) {
+      try {
+        // Vider les données locales
+        localStorage.clear()
+        sessionStorage.clear()
+        
+        // Appeler l'API de réinitialisation
+        const response = await fetch('/api/reset-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        if (response.ok) {
+          alert('✅ Toutes les données ont été réinitialisées avec succès !\n\nLa page va maintenant se recharger.')
+          window.location.href = '/'
+        } else {
+          alert('❌ Erreur lors de la réinitialisation des données')
+        }
+      } catch (error) {
+        console.error('Erreur:', error)
+        alert('❌ Erreur lors de la réinitialisation')
+      }
+    }
   }
 
   const handlePasswordChange = () => {
@@ -986,7 +1012,14 @@ export default function SettingsPage() {
           )}
 
           {/* Save Button */}
-          <div className="flex justify-end mt-8">
+          <div className="flex justify-end mt-8 space-x-4">
+            <button
+              onClick={handleResetData}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 shadow-lg shadow-red-500/25"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Réinitialiser les données</span>
+            </button>
             <button
               onClick={handleSave}
               className="bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 shadow-lg shadow-orange-500/25"
