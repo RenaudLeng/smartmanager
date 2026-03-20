@@ -98,13 +98,21 @@ async function postHandler(request: NextRequest) {
       )
     }
 
+    // Calculer automatiquement la marge et la rentabilité
+    const purchase = parseFloat(purchasePrice) || 0
+    const selling = parseFloat(sellingPrice)
+    const margin = selling - purchase
+    const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
+
     const product = await prisma.product.create({
       data: {
         name,
         description,
         barcode,
-        purchasePrice: purchasePrice || 0,
-        sellingPrice,
+        purchasePrice: purchase,
+        sellingPrice: selling,
+        margin,
+        profitability,
         quantity: quantity || 0,
         minStock: minStock || 0,
         categoryId,

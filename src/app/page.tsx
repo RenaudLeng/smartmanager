@@ -17,38 +17,50 @@ import {
 } from 'lucide-react'
 
 export default function HomePage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      setIsAuthenticated(true)
-      router.push('/dashboard')
+    let isMounted = true
+    
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (token && isMounted) {
+          await router.push('/dashboard')
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
     }
-    setIsLoading(false)
+    
+    const timeoutId = setTimeout(checkAuth, 100)
+    
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
+    }
   }, [router])
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white">Chargement...</div>
       </div>
     )
   }
 
-  if (isAuthenticated) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-black">
       {/* Lien d'accès SuperAdmin */}
       <div className="fixed top-4 right-4 z-50">
         <button
           onClick={() => router.push('/superadmin')}
-          className="bg-slate-800/90 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-lg text-xs font-medium transition-colors border border-slate-600"
+          className="bg-black/90 hover:bg-gray-900 text-gray-300 px-3 py-1 rounded-lg text-xs font-medium transition-colors border border-gray-700"
         >
           SuperAdmin
         </button>
@@ -63,7 +75,7 @@ export default function HomePage() {
               <img 
                 src="/logo.png" 
                 alt="SmartManager" 
-                className="h-32 w-auto object-contain drop-shadow-2xl"
+                className="h-48 w-auto object-contain drop-shadow-2xl"
               />
             </div>
             
@@ -92,7 +104,7 @@ export default function HomePage() {
       </div>
 
       {/* Features Section */}
-      <div className="py-20 bg-slate-800">
+      <div className="py-20 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -105,7 +117,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* POS / Caisse */}
-            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/10">
+            <div className="group bg-linear-to-br from-gray-900 to-black p-8 rounded-xl border border-gray-800 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10">
               <div className="bg-linear-to-r from-green-500 to-green-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <ShoppingCart className="w-8 h-8 text-white" />
               </div>
@@ -120,7 +132,7 @@ export default function HomePage() {
             </div>
 
             {/* Gestion de stock */}
-            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
+            <div className="group bg-linear-to-br from-gray-900 to-black p-8 rounded-xl border border-gray-800 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
               <div className="bg-linear-to-r from-blue-500 to-blue-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Package className="w-8 h-8 text-white" />
               </div>
@@ -135,7 +147,7 @@ export default function HomePage() {
             </div>
 
             {/* Dépenses */}
-            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-purple-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10">
+            <div className="group bg-linear-to-br from-gray-900 to-black p-8 rounded-xl border border-gray-800 hover:border-purple-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10">
               <div className="bg-linear-to-r from-purple-500 to-purple-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <CreditCard className="w-8 h-8 text-white" />
               </div>
@@ -150,7 +162,7 @@ export default function HomePage() {
             </div>
 
             {/* Personnel */}
-            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10">
+            <div className="group bg-linear-to-br from-gray-900 to-black p-8 rounded-xl border border-gray-800 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10">
               <div className="bg-linear-to-r from-yellow-500 to-yellow-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-8 h-8 text-white" />
               </div>
@@ -165,7 +177,7 @@ export default function HomePage() {
             </div>
 
             {/* Analytics */}
-            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-red-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10">
+            <div className="group bg-linear-to-br from-gray-900 to-black p-8 rounded-xl border border-gray-800 hover:border-red-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10">
               <div className="bg-linear-to-r from-red-500 to-red-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
@@ -180,7 +192,7 @@ export default function HomePage() {
             </div>
 
             {/* Mobile First */}
-            <div className="group bg-linear-to-br from-slate-800 to-slate-700 p-8 rounded-xl border border-slate-600 hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/10 md:col-span-2 lg:col-span-1">
+            <div className="group bg-linear-to-br from-gray-900 to-black p-8 rounded-xl border border-gray-800 hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/10 md:col-span-2 lg:col-span-1">
               <div className="bg-linear-to-r from-orange-500 to-orange-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Smartphone className="w-8 h-8 text-white" />
               </div>
@@ -198,7 +210,7 @@ export default function HomePage() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-20 bg-slate-900">
+      <div className="py-20 bg-black">
         <div className="max-w-4xl mx-auto text-center px-4">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Prêt à transformer votre gestion ?

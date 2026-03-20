@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-10',
         status: 'in_stock',
         supplier: 'Import Gabon',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '2',
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-10',
         status: 'low_stock',
         supplier: 'Société Palmier',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '3',
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-09',
         status: 'out_of_stock',
         supplier: 'Gabon Frigorifique',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '4',
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-10',
         status: 'in_stock',
         supplier: 'Maraîcher Local',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '5',
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-10',
         status: 'low_stock',
         supplier: 'Boulangerie du Centre',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '6',
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-08',
         status: 'in_stock',
         supplier: 'Sucrierie du Gabon',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '7',
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-10',
         status: 'low_stock',
         supplier: 'Laiterie Gabonaise',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       },
       {
         id: '8',
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         lastUpdated: '2024-03-09',
         status: 'in_stock',
         supplier: 'Moulin du Gabon',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100'
+        image: undefined
       }
     ]
 

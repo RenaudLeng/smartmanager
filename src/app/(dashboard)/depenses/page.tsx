@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, DollarSign, TrendingDown, Calendar, Filter, Edit, Trash2, Grid, List } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Search, Plus, DollarSign, TrendingDown, Calendar, Edit, Trash2, Grid, List } from 'lucide-react'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface Expense {
@@ -134,6 +134,11 @@ export default function DepensesPage() {
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense)
     setShowModal(true)
+  }
+
+  const handleRowClick = (expense: Expense) => {
+    setSelectedExpense(expense)
+    setShowDetails(true)
   }
 
   const handleAdd = () => {
@@ -286,10 +291,10 @@ export default function DepensesPage() {
           </div>
           <button
             onClick={handleAdd}
-            className="bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-orange-500/25 flex items-center space-x-2"
+            className="bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-2 rounded-lg font-medium shadow-lg shadow-orange-500/25"
+            title="Ajouter une dépense"
           >
             <Plus className="h-5 w-5" />
-            Ajouter une dépense
           </button>
         </div>
       </div>
@@ -348,12 +353,15 @@ export default function DepensesPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Méthode</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Montant</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
                 {filteredExpenses.map((expense) => (
-                  <tr key={expense.id} className="hover:bg-white/5 transition-colors">
+                  <tr 
+                    key={expense.id} 
+                    className="hover:bg-white/5 transition-colors cursor-pointer"
+                    onClick={() => handleRowClick(expense)}
+                  >
                     <td className="px-4 py-4">
                       <div className="flex items-center space-x-3">
                         <div className={`w-8 h-8 rounded-full ${getCategoryColor(expense.category)}`}>
@@ -383,24 +391,6 @@ export default function DepensesPage() {
                     <td className="px-4 py-4 text-sm text-red-400 font-semibold">
                       {expense.amount.toLocaleString('fr-GA')} XAF
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEdit(expense)}
-                          className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium transition-colors"
-                          title="Modifier"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteExpense(expense)}
-                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -409,101 +399,197 @@ export default function DepensesPage() {
         </div>
       )}
 
+      {/* Details Modal */}
+      {showDetails && selectedExpense && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-bold text-white">Détails de la dépense</h2>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <Plus className="h-6 w-6 rotate-45" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Informations générales</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Description:</span>
+                    <span className="text-white font-medium">{selectedExpense.description}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Montant:</span>
+                    <span className="text-red-400 font-bold">{selectedExpense.amount.toLocaleString('fr-GA')} XAF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Date:</span>
+                    <span className="text-white">{selectedExpense.date}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Catégorie:</span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(selectedExpense.category)}`}>
+                      {selectedExpense.category === 'fourniture' ? 'Fournitures' : selectedExpense.category === 'personnel' ? 'Personnel' : selectedExpense.category === 'loyer' ? 'Loyer' : selectedExpense.category === 'energie' ? 'Énergie' : selectedExpense.category === 'transport' ? 'Transport' : selectedExpense.category === 'marketing' ? 'Marketing' : selectedExpense.category === 'maintenance' ? 'Maintenance' : 'Autre'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Paiement et documents</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Méthode:</span>
+                    <span className="text-white">{selectedExpense.paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Reçu:</span>
+                    <span className="text-white">{selectedExpense.receipt || 'Non spécifié'}</span>
+                  </div>
+                  {selectedExpense.notes && (
+                    <div className="mt-3">
+                      <span className="text-gray-400">Notes:</span>
+                      <p className="text-white mt-1">{selectedExpense.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => {
+                  setShowDetails(false)
+                  handleDeleteExpense(selectedExpense)
+                }}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Supprimer
+              </button>
+              <button
+                onClick={() => {
+                  setShowDetails(false)
+                  handleEdit(selectedExpense)
+                }}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Modifier
+              </button>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-white mb-4">
-              {editingExpense ? 'Modifier la dépense' : 'Ajouter une dépense'}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
-                <textarea
-                  value={editingExpense?.description || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, description: e.target.value})}
-                  rows={3}
-                  className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Montant (XAF)</label>
-                <input
-                  type="number"
-                  value={editingExpense?.amount || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, amount: Number(e.target.value)})}
-                  className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Catégorie</label>
-                <select
-                  value={editingExpense?.category || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, category: e.target.value})}
-                  className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="">Sélectionner...</option>
-                  {categories.filter(cat => cat.value !== 'all').map(category => (
-                    <option key={category.value} value={category.value}>{category.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
-                <input
-                  type="date"
-                  value={editingExpense?.date || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, date: e.target.value})}
-                  className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Méthode de paiement</label>
-                <select
-                  value={editingExpense?.paymentMethod || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, paymentMethod: e.target.value})}
-                  className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="">Sélectionner...</option>
-                  <option value="Virement bancaire">Virement bancaire</option>
-                  <option value="Espèces">Espèces</option>
-                  <option value="Carte de crédit">Carte de crédit</option>
-                  <option value="Espèces">Espèces</option>
-                  <option value="Liquide">Liquide</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Reçu</label>
-                <input
-                  type="text"
-                  value={editingExpense?.receipt || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, receipt: e.target.value})}
-                  className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Notes</label>
-                <textarea
-                  value={editingExpense?.notes || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense!, notes: e.target.value})}
-                  rows={4}
-                  className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-white/20">
+              <h2 className="text-xl font-bold text-white">
+                {editingExpense ? 'Modifier la dépense' : 'Ajouter une dépense'}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                  <textarea
+                    value={editingExpense?.description || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Montant (XAF)</label>
+                  <input
+                    type="number"
+                    value={editingExpense?.amount || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, amount: Number(e.target.value)})}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Catégorie</label>
+                  <select
+                    value={editingExpense?.category || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, category: e.target.value})}
+                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Sélectionner...</option>
+                    {categories.filter(cat => cat.value !== 'all').map(category => (
+                      <option key={category.value} value={category.value}>{category.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={editingExpense?.date || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, date: e.target.value})}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Méthode de paiement</label>
+                  <select
+                    value={editingExpense?.paymentMethod || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, paymentMethod: e.target.value})}
+                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="Virement bancaire">Virement bancaire</option>
+                    <option value="Espèces">Espèces</option>
+                    <option value="Carte de crédit">Carte de crédit</option>
+                    <option value="Espèces">Espèces</option>
+                    <option value="Liquide">Liquide</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Reçu</label>
+                  <input
+                    type="text"
+                    value={editingExpense?.receipt || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, receipt: e.target.value})}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Notes</label>
+                  <textarea
+                    value={editingExpense?.notes || ''}
+                    onChange={(e) => setEditingExpense({...editingExpense!, notes: e.target.value})}
+                    rows={4}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
               </div>
             </div>
-            <div className="flex justify-end space-x-4 mt-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-medium shadow-lg shadow-orange-500/25"
-              >
-                {editingExpense ? 'Mettre à jour' : 'Ajouter'}
-              </button>
+            <div className="p-6 border-t border-white/20">
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-medium shadow-lg shadow-orange-500/25"
+                >
+                  {editingExpense ? 'Mettre à jour' : 'Ajouter'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

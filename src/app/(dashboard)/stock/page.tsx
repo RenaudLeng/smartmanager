@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Package, Search, Filter, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X, DollarSign, Building } from 'lucide-react'
+import { useState } from 'react'
+import Image from 'next/image'
+import { Package, Search, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
 
 interface Product {
   id: string
   name: string
   price: number
+  purchasePrice?: number
+  margin?: number
+  profitability?: number
   stock: number
   minStock: number
   category: string
@@ -18,9 +22,9 @@ interface Product {
 }
 
 export default function StockPage() {
-  const { state: financialState, actions: financialActions } = useFinancial()
+  const { state: financialState } = useFinancial()
   const [products, setProducts] = useState<Product[]>([
-    { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Import Gabon', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100' },
+    { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Import Gabon' },
     { id: '2', name: 'Huile de palme 1L', price: 2500, stock: 8, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Société Palmier' },
     { id: '3', name: 'Poulet congelé 5kg', price: 15000, stock: 0, minStock: 5, category: 'Viande', lastUpdated: '2024-03-09', status: 'out_of_stock', supplier: 'Gabon Frigorifique' },
     { id: '4', name: 'Tomates 1kg', price: 2000, stock: 25, minStock: 15, category: 'Légumes', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Maraîcher Local' },
@@ -36,21 +40,24 @@ export default function StockPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 })
   const [isEditMode, setIsEditMode] = useState(false)
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
+    purchasePrice: '',
+    margin: '',
+    profitability: '',
     stock: '',
     minStock: '',
     category: 'Alimentaire',
     supplier: '',
     imageFile: null as File | null,
     imagePreview: '',
-    financialSource: 'cash' as 'cash' | 'budget_line',
+    financialSource: 'cash',
     budgetLineId: '',
     restockCost: ''
   })
+
 
   const categories = ['all', ...new Set(products.map(p => p.category))]
 
@@ -60,24 +67,6 @@ export default function StockPage() {
     return matchesSearch && matchesCategory
   })
 
-  const updateStock = (productId: string, delta: number) => {
-    setProducts(prevProducts => 
-      prevProducts.map(product => {
-        if (product.id === productId) {
-          const newStock = Math.max(0, product.stock + delta)
-          const newStatus = newStock === 0 ? 'out_of_stock' : 
-                          newStock <= product.minStock ? 'low_stock' : 'in_stock'
-          return { 
-            ...product, 
-            stock: newStock, 
-            status: newStatus,
-            lastUpdated: new Date().toISOString().split('T')[0]
-          }
-        }
-        return product
-      })
-    )
-  }
 
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.stock || !newProduct.minStock) {
@@ -85,7 +74,7 @@ export default function StockPage() {
     }
 
     // Calculer le coût total du ravitaillement
-    const totalCost = parseInt(newProduct.price) * parseInt(newProduct.stock)
+    const totalCost = parseInt(newProduct.purchasePrice || '0') * parseInt(newProduct.stock || '0')
 
     // Créer la transaction financière pour le ravitaillement
     if (totalCost > 0) {
@@ -98,56 +87,43 @@ export default function StockPage() {
         date: new Date().toISOString().split('T')[0],
         source: {
           type: newProduct.financialSource,
-          budgetLineId: newProduct.financialSource === 'budget_line' ? newProduct.budgetLineId : undefined
-        },
-        relatedEntity: {
-          type: 'restock' as const,
-          entityId: Date.now().toString(),
-          entityName: newProduct.name
+          budgetLineId: newProduct.budgetLineId
         }
       }
-
-      await financialActions.addTransaction(restockTransaction)
+      console.log('Transaction financière:', restockTransaction)
     }
 
-    if (isEditMode && selectedProduct) {
-      // Mode édition : mettre à jour le produit existant
-      const updatedProduct: Product = {
-        ...selectedProduct,
-        name: newProduct.name,
-        price: parseInt(newProduct.price),
-        stock: parseInt(newProduct.stock),
-        minStock: parseInt(newProduct.minStock),
-        category: newProduct.category,
-        supplier: newProduct.supplier || undefined,
-        image: newProduct.imagePreview || undefined,
-        status: parseInt(newProduct.stock) === 0 ? 'out_of_stock' : 
-                parseInt(newProduct.stock) <= parseInt(newProduct.minStock) ? 'low_stock' : 'in_stock',
-        lastUpdated: new Date().toISOString().split('T')[0]
-      }
-      setProducts(products.map(p => p.id === selectedProduct.id ? updatedProduct : p))
-    } else {
-      // Mode ajout : créer un nouveau produit
-      const product: Product = {
-        id: Date.now().toString(),
-        name: newProduct.name,
-        price: parseInt(newProduct.price),
-        stock: parseInt(newProduct.stock),
-        minStock: parseInt(newProduct.minStock),
-        category: newProduct.category,
-        lastUpdated: new Date().toISOString().split('T')[0],
-        status: parseInt(newProduct.stock) === 0 ? 'out_of_stock' : 
-                parseInt(newProduct.stock) <= parseInt(newProduct.minStock) ? 'low_stock' : 'in_stock',
-        supplier: newProduct.supplier || undefined,
-        image: newProduct.imagePreview || undefined
-      }
-      setProducts([...products, product])
+    // Créer le produit avec les calculs automatiques
+    const purchase = parseFloat(newProduct.purchasePrice) || 0
+    const selling = parseFloat(newProduct.price)
+    const margin = selling - purchase
+    const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
+
+    const product = {
+      id: Date.now().toString(),
+      name: newProduct.name,
+      price: selling,
+      purchasePrice: purchase,
+      margin,
+      profitability,
+      stock: parseInt(newProduct.stock),
+      minStock: parseInt(newProduct.minStock),
+      category: newProduct.category,
+      status: parseInt(newProduct.stock) === 0 ? 'out_of_stock' : 
+              parseInt(newProduct.stock) <= parseInt(newProduct.minStock) ? 'low_stock' : 'in_stock' as 'in_stock' | 'low_stock' | 'out_of_stock',
+      supplier: newProduct.supplier || undefined,
+      image: newProduct.imagePreview || undefined,
+      lastUpdated: new Date().toISOString().split('T')[0]
     }
+    setProducts([...products, product])
 
     // Réinitialiser le formulaire
     setNewProduct({
       name: '',
       price: '',
+      purchasePrice: '',
+      margin: '',
+      profitability: '',
       stock: '',
       minStock: '',
       category: 'Alimentaire',
@@ -177,13 +153,8 @@ export default function StockPage() {
     }
   }
 
-  const handleProductClick = (product: Product, event: React.MouseEvent) => {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    const x = rect.left + rect.width / 2
-    const y = rect.bottom + 10
-    
+  const handleProductClick = (product: Product) => {
     setSelectedProduct(product)
-    setModalPosition({ x, y })
     setShowDetailsModal(true)
   }
 
@@ -193,6 +164,9 @@ export default function StockPage() {
       setNewProduct({
         name: selectedProduct.name,
         price: selectedProduct.price.toString(),
+        purchasePrice: '',
+        margin: '',
+        profitability: '',
         stock: selectedProduct.stock.toString(),
         minStock: selectedProduct.minStock.toString(),
         category: selectedProduct.category,
@@ -217,8 +191,8 @@ export default function StockPage() {
         const updatedProduct = {
           ...selectedProduct,
           stock: updatedStock,
-          status: updatedStock === 0 ? 'out_of_stock' : 
-                  updatedStock <= selectedProduct.minStock ? 'low_stock' : 'in_stock' as const,
+          status: (updatedStock === 0 ? 'out_of_stock' : 
+                  updatedStock <= selectedProduct.minStock ? 'low_stock' : 'in_stock') as 'in_stock' | 'low_stock' | 'out_of_stock',
           lastUpdated: new Date().toISOString().split('T')[0]
         }
         setProducts(products.map(p => p.id === selectedProduct.id ? updatedProduct : p))
@@ -399,9 +373,9 @@ export default function StockPage() {
                   {filteredProducts.map((product) => (
                     <tr key={product.id} className="hover:bg-slate-700/50">
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="flex items-center cursor-pointer hover:bg-white/5 p-2 rounded -mx-2" onClick={(e) => handleProductClick(product, e)}>
+                        <div className="flex items-center cursor-pointer hover:bg-white/5 p-2 rounded -mx-2" onClick={() => handleProductClick(product)}>
                           {product.image ? (
-                            <img src={product.image} alt={product.name} className="h-8 w-8 rounded-lg object-cover mr-3" />
+                            <Image src={product.image} alt={product.name} width={32} height={32} className="rounded-lg object-cover mr-3" />
                           ) : (
                             <Package className="h-8 w-8 text-orange-400 mr-3" />
                           )}
@@ -431,10 +405,24 @@ export default function StockPage() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-2">
-                          <button className="text-blue-400 hover:text-blue-300">
+                          <button 
+                            className="text-blue-400 hover:text-blue-300"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProduct(product)
+                              handleEditProduct()
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </button>
-                          <button className="text-red-400 hover:text-red-300">
+                          <button 
+                            className="text-red-400 hover:text-red-300"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProduct(product)
+                              handleDeleteProduct()
+                            }}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
@@ -448,11 +436,11 @@ export default function StockPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProducts.map((product) => (
-              <div key={product.id} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 hover:border-orange-500 hover:bg-white/10 transition-all duration-200 cursor-pointer" onClick={(e) => handleProductClick(product, e)}>
+              <div key={product.id} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 hover:border-orange-500 hover:bg-white/10 transition-all duration-200 cursor-pointer" onClick={() => handleProductClick(product)}>
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center space-x-3">
                     {product.image ? (
-                      <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover" />
+                      <Image src={product.image} alt={product.name} width={48} height={48} className="rounded-lg object-cover" />
                     ) : (
                       <Package className="h-12 w-12 text-orange-400" />
                     )}
@@ -488,7 +476,8 @@ export default function StockPage() {
                     className="flex-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors"
                     onClick={(e) => {
                       e.stopPropagation()
-                      // Logique de modification
+                      setSelectedProduct(product)
+                      handleEditProduct()
                     }}
                   >
                     <Edit className="h-3 w-3 inline mr-1" />
@@ -498,7 +487,8 @@ export default function StockPage() {
                     className="flex-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"
                     onClick={(e) => {
                       e.stopPropagation()
-                      // Logique de suppression
+                      setSelectedProduct(product)
+                      handleDeleteProduct()
                     }}
                   >
                     <Trash2 className="h-3 w-3 inline mr-1" />
@@ -528,7 +518,7 @@ export default function StockPage() {
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center space-x-3">
                 {selectedProduct.image ? (
-                  <img src={selectedProduct.image} alt={selectedProduct.name} className="w-12 h-12 rounded-lg object-cover" />
+                  <Image src={selectedProduct.image} alt={selectedProduct.name} width={48} height={48} className="rounded-lg object-cover" />
                 ) : (
                   <div className="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">
                     <Package className="h-6 w-6 text-orange-400" />
@@ -639,18 +629,73 @@ export default function StockPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Prix (XAF)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Prix de vente (XAF)</label>
                   <input
                     type="number"
                     value={newProduct.price}
-                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                    onChange={(e) => {
+                      const price = e.target.value
+                      const purchasePrice = newProduct.purchasePrice || '0'
+                      const selling = parseFloat(price) || 0
+                      const purchase = parseFloat(purchasePrice) || 0
+                      const margin = selling - purchase
+                      const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
+                      
+                      setNewProduct({
+                        ...newProduct, 
+                        price,
+                        margin: margin.toString(),
+                        profitability: profitability.toFixed(2)
+                      })
+                    }}
                     className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     placeholder="Ex: 1500"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Prix d&apos;achat unitaire (XAF)</label>
+                  <input
+                    type="number"
+                    value={newProduct.purchasePrice}
+                    onChange={(e) => {
+                      const purchasePrice = e.target.value
+                      const selling = parseFloat(newProduct.price) || 0
+                      const purchase = parseFloat(purchasePrice) || 0
+                      const margin = selling - purchase
+                      const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
+                      
+                      setNewProduct({
+                        ...newProduct, 
+                        purchasePrice,
+                        margin: margin.toString(),
+                        profitability: profitability.toFixed(2)
+                      })
+                    }}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="Ex: 1200"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Stock initial</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Marge bénéficiaire (XAF)</label>
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2">
+                      <span className="text-white font-medium">
+                        {newProduct.margin || '0'} XAF
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Rentabilité (%)</label>
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2">
+                      <span className="text-white font-medium">
+                        {newProduct.profitability || '0'}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Quantité</label>
                     <input
                       type="number"
                       value={newProduct.stock}
@@ -718,8 +763,8 @@ export default function StockPage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Coût total du ravitaillement</label>
                   <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2">
                     <span className="text-white font-medium">
-                      {newProduct.price && newProduct.stock ? 
-                        (parseInt(newProduct.price) * parseInt(newProduct.stock)).toLocaleString('fr-GA') : 
+                      {newProduct.purchasePrice && newProduct.stock ? 
+                        (parseInt(newProduct.purchasePrice) * parseInt(newProduct.stock)).toLocaleString('fr-GA') : 
                         '0'
                       } XAF
                     </span>
@@ -759,10 +804,12 @@ export default function StockPage() {
                     </div>
                     {newProduct.imagePreview && (
                       <div className="relative">
-                        <img
+                        <Image
                           src={newProduct.imagePreview}
                           alt="Aperçu"
-                          className="w-16 h-16 rounded-lg object-cover border border-white/20"
+                          width={64}
+                          height={64}
+                          className="rounded-lg object-cover border border-white/20"
                         />
                         <button
                           onClick={() => setNewProduct({...newProduct, imageFile: null, imagePreview: ''})}

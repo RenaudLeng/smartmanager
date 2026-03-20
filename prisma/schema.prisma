@@ -84,6 +84,7 @@ model Product {
   purchasePrice     Float    @default(0)
   sellingPrice      Float
   margin            Float?
+  profitability     Float?   // Rentabilité en pourcentage
   quantity          Float    @default(0)
   minStock          Float    @default(0)
   categoryId        String
