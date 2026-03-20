@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ShoppingCart, Plus, Minus, Trash2, Search, Package, CreditCard, Smartphone, Receipt, History, CheckCircle, X, Grid, List, Camera } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { bluetoothPrintService } from '@/services/BluetoothPrintService'
