@@ -11,7 +11,7 @@ const budgetLineSchema = z.object({
 })
 
 // GET /api/financial/budget-lines
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // TODO: Implémenter la logique avec Prisma
     // const budgetLines = await prisma.budgetLine.findMany({

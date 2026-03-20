@@ -156,6 +156,7 @@ export function useFinancial(): UseFinancialReturn {
         metrics: calculateMetrics([...prev.budgetLines, newBudgetLine], prev.transactions)
       }))
     } catch (error) {
+      console.error('Erreur lors de la création de la ligne budgétaire:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la création de la ligne budgétaire' }))
     }
   }, [calculateMetrics])
@@ -169,6 +170,7 @@ export function useFinancial(): UseFinancialReturn {
         )
       }))
     } catch (error) {
+      console.error('Erreur lors de la mise à jour de la ligne budgétaire:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la mise à jour de la ligne budgétaire' }))
     }
   }, [])
@@ -180,6 +182,7 @@ export function useFinancial(): UseFinancialReturn {
         budgetLines: prev.budgetLines.filter(line => line.id !== id)
       }))
     } catch (error) {
+      console.error('Erreur lors de la suppression de la ligne budgétaire:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la suppression de la ligne budgétaire' }))
     }
   }, [])
@@ -213,6 +216,7 @@ export function useFinancial(): UseFinancialReturn {
         metrics: calculateMetrics(prev.budgetLines, [...prev.transactions, newTransaction])
       }))
     } catch (error) {
+      console.error('Erreur lors de l\'ajout de la transaction:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de l\'ajout de la transaction' }))
     }
   }, [state.budgetLines, calculateMetrics, updateBudgetLine])
@@ -226,6 +230,7 @@ export function useFinancial(): UseFinancialReturn {
         )
       }))
     } catch (error) {
+      console.error('Erreur lors de la mise à jour de la transaction:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la mise à jour de la transaction' }))
     }
   }, [])
@@ -237,6 +242,7 @@ export function useFinancial(): UseFinancialReturn {
         transactions: prev.transactions.filter(t => t.id !== id)
       }))
     } catch (error) {
+      console.error('Erreur lors de la suppression de la transaction:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la suppression de la transaction' }))
     }
   }, [])

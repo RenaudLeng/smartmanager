@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 // GET /api/financial/metrics
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // TODO: Implémenter la logique avec Prisma pour calculer les métriques réelles
     // const transactions = await prisma.financialTransaction.findMany({

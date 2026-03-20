@@ -22,7 +22,7 @@ const transactionSchema = z.object({
 })
 
 // GET /api/financial/transactions
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // TODO: Implémenter la logique avec Prisma
     // const transactions = await prisma.financialTransaction.findMany({
