@@ -27,6 +27,22 @@ import GlobalReports from '@/components/SuperAdmin/GlobalReports'
 import SystemConfig from '@/components/SuperAdmin/SystemConfig'
 import TenantManager from '@/components/SuperAdmin/TenantManager'
 
+interface GlobalStats {
+  totalTenants: number
+  activeTenants: number
+  totalUsers: number
+  totalSales: number
+  todaySales: number
+  monthSales: number
+  newTenantsThisMonth: number
+  monthlyRevenue?: number
+  activityRate?: number
+}
+
+const handleUserAction = (action: string, userId: string, data?: any) => {
+    console.log('User action:', action, userId, data)
+  }
+
 export default function SuperAdminPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   
@@ -198,7 +214,10 @@ export default function SuperAdminPage() {
         )}
 
         {activeTab === 'users' && (
-          <UsersManagement />
+          <UsersManagement 
+            tenants={tenants}
+            onUserAction={handleUserAction}
+          />
         )}
 
         {activeTab === 'reports' && (

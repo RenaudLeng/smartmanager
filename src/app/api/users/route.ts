@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     console.error('Erreur POST /api/users:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Données invalides', details: error.errors },
+        { success: false, error: 'Données invalides', details: error.issues || [] },
         { status: 400 }
       )
     }
@@ -164,7 +164,7 @@ export async function PUT(
     console.error('Erreur PUT /api/users:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Données invalides', details: error.errors },
+        { success: false, error: 'Données invalides', details: error.issues || [] },
         { status: 400 }
       )
     }

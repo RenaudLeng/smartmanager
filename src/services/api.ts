@@ -2,11 +2,100 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
 
-interface ApiResponse<T> {
+interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
-  message?: string
   error?: string
+  details?: Record<string, unknown>
+}
+
+interface PaginatedResponse<T> {
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+interface LoginRequest {
+  email: string
+  password: string
+}
+
+interface RegisterRequest {
+  name: string
+  email: string
+  password: string
+  businessType?: string
+}
+
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  tenantId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface AuthResponse {
+  user: User
+  token: string
+}
+
+interface Tenant {
+  id: string
+  name: string
+  businessType: string
+  isActive: boolean
+  createdAt: string
+}
+
+interface Product {
+  id: string
+  name: string
+  sellingPrice: number
+  category: string
+  quantity: number
+  minStock: number
+  isActive: boolean
+  tenantId: string
+  description?: string
+}
+
+interface Sale {
+  id: string
+  totalAmount: number
+  paymentMethod: string
+  createdAt: string
+  tenantId: string
+}
+
+interface Expense {
+  id: string
+  description: string
+  amount: number
+  category: string
+  date: string
+  paymentMethod: string
+  receipt?: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface Employee {
+  id: string
+  name: string
+  email: string
+  position: string
+  salary: number
+  isActive: boolean
+  tenantId: string
+  notes?: string
 }
 
 class ApiService {
@@ -44,22 +133,14 @@ class ApiService {
 
   // Authentification
   async login(email: string, password: string) {
-    return this.request<{
-      user: any
-      token: string
-      tenant: any
-    }>('/auth/login', {
+    return this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
   }
 
-  async register(userData: any) {
-    return this.request<{
-      user: any
-      token: string
-      tenant: any
-    }>('/auth/register', {
+  async register(userData: RegisterRequest) {
+    return this.request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     })

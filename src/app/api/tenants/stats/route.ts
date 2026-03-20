@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
 
     const topBusinessTypes = businessTypes.map(item => ({
       type: item.businessType as string,
-      count: item._count as number,
-      percentage: totalTenants > 0 ? Math.round((item._count / totalTenants) * 100 * 10) / 10 : 0
+      count: Number(item._count),
+      percentage: totalTenants > 0 ? Math.round((Number(item._count) / totalTenants) * 100 * 10) / 10 : 0
     }))
 
     const globalStats = {

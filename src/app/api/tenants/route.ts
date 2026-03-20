@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
       await prisma.product.createMany({
         data: validatedData.businessConfig.defaultProducts.map(product => ({
           ...product,
+          categoryId: product.category,
           tenantId: tenant.id,
           quantity: 0,
           minStock: 0,
@@ -150,8 +151,9 @@ export async function POST(request: NextRequest) {
         price: validatedData.subscriptionPlan === 'free' ? 0 : 
                validatedData.subscriptionPlan === 'premium' ? 10000 : 25000,
         startDate: new Date(),
+        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // 1 an plus tard
         status: 'active',
-        features: getFeatures(validatedData.subscriptionPlan)
+        features: String(getFeatures(validatedData.subscriptionPlan))
       }
     })
 
