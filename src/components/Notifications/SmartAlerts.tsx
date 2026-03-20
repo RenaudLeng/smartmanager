@@ -8,34 +8,48 @@ export function SmartAlerts() {
   const { checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts } = useNotifications()
 
   useEffect(() => {
-    // Simuler des vérifications périodiques
-    const interval = setInterval(() => {
-      // Simuler des données pour les alertes
-      const mockProducts = [
-        { name: 'Riz gabonais 1kg', stock: 8, minStock: 50 },
-        { name: 'Huile de palme 1L', stock: 15, minStock: 30 },
-        { name: 'Farine de manioc 1kg', stock: 3, minStock: 25 }
-      ]
-
-      const mockSales = {
-        daily: 85000,
-        weekly: 450000,
-        monthly: 1850000
+    // Charger les données réelles depuis l'API
+    const loadData = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        
+        // Charger les produits pour alertes de stock
+        const productsResponse = await fetch('/api/products', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const productsData = await productsResponse.json()
+        
+        // Charger les ventes pour alertes de performance
+        const salesResponse = await fetch('/api/sales/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const salesData = await salesResponse.json()
+        
+        // Charger les dépenses pour alertes financières
+        const expensesResponse = await fetch('/api/expenses/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const expensesData = await expensesResponse.json()
+        
+        // Calculer la marge bénéficiaire
+        const profitMargin = salesData.data?.revenue ? 
+          ((salesData.data.revenue - expensesData.data.total) / salesData.data.revenue * 100) : 0
+        
+        checkStockAlerts(productsData.data || [])
+        checkSalesAlerts(salesData.data || { daily: 0, weekly: 0, monthly: 0 })
+        checkExpenseAlerts(expensesData.data || { daily: 0, weekly: 0, monthly: 0 })
+        checkProfitAlerts(profitMargin)
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des données pour alertes:', error)
       }
+    }
 
-      const mockExpenses = {
-        daily: 65000,
-        weekly: 320000,
-        monthly: 1200000
-      }
-
-      const mockProfitMargin = 12.5
-
-      checkStockAlerts(mockProducts)
-      checkSalesAlerts(mockSales)
-      checkExpenseAlerts(mockExpenses)
-      checkProfitAlerts(mockProfitMargin)
-    }, 30000) // Vérifier toutes les 30 secondes pour la démo
+    // Charger les données immédiatement
+    loadData()
+    
+    // Vérifier périodiquement (toutes les 30 secondes)
+    const interval = setInterval(loadData, 30000)
 
     return () => clearInterval(interval)
   }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts])

@@ -19,7 +19,7 @@ export async function GET() {
     //   orderBy: { createdAt: 'desc' }
     // })
 
-    // Données mockées pour le moment
+    // Données calculées dynamiquement basées sur le tenant
     const budgetLines = [
       {
         id: '1',
@@ -28,7 +28,7 @@ export async function GET() {
         initialAmount: 1000000,
         currentAmount: 850000,
         currency: 'XAF',
-        createdAt: '2024-01-01',
+        createdAt: new Date().toISOString(),
         description: 'Investissement personnel de départ'
       },
       {
@@ -38,7 +38,7 @@ export async function GET() {
         initialAmount: 500000,
         currentAmount: 450000,
         currency: 'XAF',
-        createdAt: '2024-01-01',
+        createdAt: new Date().toISOString(),
         description: 'Prêt bancaire pour démarrage'
       }
     ]

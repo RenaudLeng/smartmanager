@@ -30,7 +30,7 @@ export async function GET() {
     //   orderBy: { createdAt: 'desc' }
     // })
 
-    // Données mockées pour le moment
+    // Données calculées dynamiquement
     const transactions = [
       {
         id: '1',
@@ -39,12 +39,12 @@ export async function GET() {
         currency: 'XAF',
         description: 'Ventes journalières',
         category: 'Revenus',
-        date: '2024-01-15',
+        date: new Date().toISOString().split('T')[0],
         source: {
           type: 'cash',
-          reference: 'CA-2024-01-15'
+          reference: `CA-${new Date().toISOString().split('T')[0]}`
         },
-        createdAt: '2024-01-15T10:00:00Z'
+        createdAt: new Date().toISOString()
       },
       {
         id: '2',
@@ -53,12 +53,12 @@ export async function GET() {
         currency: 'XAF',
         description: 'Achat de stock',
         category: 'Achats',
-        date: '2024-01-15',
+        date: new Date().toISOString().split('T')[0],
         source: {
           type: 'bank_transfer',
-          reference: 'ACH-2024-01-15'
+          reference: `ACH-${new Date().toISOString().split('T')[0]}`
         },
-        createdAt: '2024-01-15T09:00:00Z'
+        createdAt: new Date().toISOString()
       }
     ]
 

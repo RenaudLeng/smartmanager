@@ -20,25 +20,29 @@ export default function LoginPage() {
     }
   }, [router])
 
-  const quickLogin = () => {
+  const handleQuickLogin = () => {
     setEmail('test@smartmanager.com')
     setPassword('password123')
-    setTimeout(() => {
-      const mockUser = {
-        id: '1',
-        name: 'Mac LENG',
-        email: 'test@smartmanager.com',
-        role: 'admin',
-        tenant: {
-          id: '1',
-          name: 'Supermarché Libreville',
-          businessType: 'Épicerie'
+    setTimeout(async () => {
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'test@smartmanager.com', password: 'password123' })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          localStorage.setItem('token', data.token)
+          localStorage.setItem('user', JSON.stringify(data.user))
+          router.push('/dashboard')
+        } else {
+          setError('Erreur lors de la connexion rapide')
         }
+      } catch (error) {
+        console.error('Erreur de connexion rapide:', error)
+        setError('Erreur de connexion')
       }
-      
-      localStorage.setItem('token', 'mock-token-' + Date.now())
-      localStorage.setItem('user', JSON.stringify(mockUser))
-      router.push('/dashboard')
     }, 500)
   }
 
@@ -48,28 +52,25 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Mock authentication for testing
-      if (email && password) {
-        const mockUser = {
-          id: '1',
-          name: email.split('@')[0] || 'Nissy LENGORIA',
-          email: email,
-          role: 'admin',
-          tenant: {
-            id: '1',
-            name: 'Supermarché Libreville',
-            businessType: 'Épicerie'
-          }
-        }
-        
-        localStorage.setItem('token', 'mock-token-' + Date.now())
-        localStorage.setItem('user', JSON.stringify(mockUser))
+      // Authentification via API réelle
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
         router.push('/dashboard')
       } else {
-        setError('Veuillez remplir tous les champs')
+        const errorData = await response.json()
+        setError(errorData.error || 'Email ou mot de passe incorrect')
       }
-    } catch {
-      setError('Erreur de connexion')
+    } catch (error) {
+      console.error('Erreur de connexion:', error)
+      setError('Erreur de connexion au serveur')
     } finally {
       setLoading(false)
     }
@@ -94,7 +95,7 @@ export default function LoginPage() {
           {/* Quick Login Button */}
           <div className="mb-6">
             <button
-              onClick={quickLogin}
+              onClick={handleQuickLogin}
               className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-lg shadow-orange-500/25"
             >
               Connexion Rapide (Test)
