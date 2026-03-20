@@ -50,6 +50,15 @@ export default function POSPage() {
     async function loadProducts() {
       try {
         const token = localStorage.getItem('token')
+        
+        // Si pas de token, utiliser des données par défaut sans erreur
+        if (!token) {
+          console.log('Utilisateur non connecté - utilisation des données par défaut')
+          setProducts([])
+          setProductsLoading(false)
+          return
+        }
+        
         const response = await fetch('/api/products', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -61,11 +70,16 @@ export default function POSPage() {
           const data = await response.json()
           setProducts(data.data || [])
         } else {
-          console.error('Erreur lors du chargement des produits')
+          // Si erreur 401, c'est normal (non authentifié)
+          if (response.status === 401) {
+            console.log('Session expirée ou non authentifiée - utilisation des données par défaut')
+          } else {
+            console.warn(`Erreur ${response.status} lors du chargement des produits`)
+          }
           setProducts([])
         }
       } catch (error) {
-        console.error('Erreur:', error)
+        console.warn('Erreur réseau lors du chargement des produits:', error)
         setProducts([])
       } finally {
         setProductsLoading(false)
