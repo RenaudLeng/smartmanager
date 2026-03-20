@@ -22,7 +22,7 @@ export function CashFlowTracker() {
     sourceType: 'cash' as FinancialTransaction['source']['type'],
     budgetLineId: '',
     reference: '',
-    relatedEntityType: 'other' as FinancialTransaction['relatedEntity']['type'],
+    relatedEntityType: 'other' as const,
     entityName: '',
     tags: ''
   })

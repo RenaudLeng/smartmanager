@@ -197,7 +197,11 @@ export function TenantProvider({ children }: TenantProviderProps) {
     isLoading,
     getPaymentMethods,
     getBusinessLabel,
-    getBusinessFeatures
+    getBusinessFeatures,
+    superAdminUser: null,
+    isSuperAdmin: false,
+    switchToTenant: () => {},
+    switchToSuperAdmin: () => {}
   }
 
   return (

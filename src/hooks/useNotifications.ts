@@ -253,7 +253,7 @@ export function useNotifications() {
         'sales_high',
         'Excellentes ventes quotidiennes',
         `Ventes du jour: ${sales.daily.toLocaleString('fr-GA')} XAF (objectif dépassé de 20%)`,
-        'success',
+        'success' as const,
         {
           autoDismiss: true,
           dismissAfter: 3000
