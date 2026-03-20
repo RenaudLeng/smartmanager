@@ -273,7 +273,7 @@ export default function POSPage() {
     if (selectedPaymentMethod === 'cash' && changeAmount > 0) {
       message += ` Monnaie: ${changeAmount.toLocaleString('fr-GA')} XAF`
     }
-    showNotification('success', message)
+    showNotification('success', message, 1500)
     
     // Clear cart and close payment modal
     setCart([])
