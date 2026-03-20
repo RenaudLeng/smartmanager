@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     console.error('Erreur GET /api/reports:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Paramètres invalides', details: error.errors },
+        { success: false, error: 'Paramètres invalides', details: error.issues || [] },
         { status: 400 }
       )
     }

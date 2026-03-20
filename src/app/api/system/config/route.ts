@@ -134,7 +134,7 @@ export async function PUT(request: NextRequest) {
     console.error('Erreur PUT /api/system/config:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Données invalides', details: error.errors },
+        { success: false, error: 'Données invalides', details: error.issues || [] },
         { status: 400 }
       )
     }
