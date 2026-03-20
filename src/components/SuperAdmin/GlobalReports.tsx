@@ -18,8 +18,17 @@ import {
   RefreshCw
 } from 'lucide-react'
 
+interface Tenant {
+  id: string
+  name: string
+  businessType: string
+  monthlyRevenue?: number
+  totalSales?: number
+  growth?: number
+}
+
 interface GlobalReportsProps {
-  tenants: any[]
+  tenants: Tenant[]
   globalStats: any
 }
 
