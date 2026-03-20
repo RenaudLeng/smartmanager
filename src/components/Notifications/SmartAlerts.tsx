@@ -13,23 +13,54 @@ export function SmartAlerts() {
       try {
         const token = localStorage.getItem('token')
         
+        // Vérifier si le token existe avant de faire les appels API
+        if (!token) {
+          console.log('Pas de token trouvé, utilisation de données par défaut')
+          // Utiliser des données par défaut si pas authentifié
+          checkStockAlerts([])
+          checkSalesAlerts({ daily: 0, weekly: 0, monthly: 0 })
+          checkExpenseAlerts({ daily: 0, weekly: 0, monthly: 0 })
+          checkProfitAlerts(0)
+          return
+        }
+        
         // Charger les produits pour alertes de stock
         const productsResponse = await fetch('/api/products', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        const productsData = await productsResponse.json()
         
         // Charger les ventes pour alertes de performance
         const salesResponse = await fetch('/api/sales/stats', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        const salesData = await salesResponse.json()
         
         // Charger les dépenses pour alertes financières
         const expensesResponse = await fetch('/api/expenses/stats', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        const expensesData = await expensesResponse.json()
+        
+        // Gérer les réponses même si elles échouent
+        let productsData = { data: [] }
+        let salesData = { data: { daily: 0, weekly: 0, monthly: 0, revenue: 0 } }
+        let expensesData = { data: { daily: 0, weekly: 0, monthly: 0, total: 0 } }
+        
+        if (productsResponse.ok) {
+          productsData = await productsResponse.json()
+        } else {
+          console.warn('Erreur chargement produits:', productsResponse.status)
+        }
+        
+        if (salesResponse.ok) {
+          salesData = await salesResponse.json()
+        } else {
+          console.warn('Erreur chargement ventes:', salesResponse.status)
+        }
+        
+        if (expensesResponse.ok) {
+          expensesData = await expensesResponse.json()
+        } else {
+          console.warn('Erreur chargement dépenses:', expensesResponse.status)
+        }
         
         // Calculer la marge bénéficiaire
         const profitMargin = salesData.data?.revenue ? 
@@ -42,6 +73,11 @@ export function SmartAlerts() {
         
       } catch (error) {
         console.error('Erreur lors du chargement des données pour alertes:', error)
+        // Utiliser des données par défaut en cas d'erreur
+        checkStockAlerts([])
+        checkSalesAlerts({ daily: 0, weekly: 0, monthly: 0 })
+        checkExpenseAlerts({ daily: 0, weekly: 0, monthly: 0 })
+        checkProfitAlerts(0)
       }
     }
 
