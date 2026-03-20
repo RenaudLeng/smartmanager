@@ -11,6 +11,39 @@ export async function GET() {
     //   where: { tenantId: user.tenantId }
     // })
 
+    // Vérifier si les données ont été réinitialisées (via header ou logique de session)
+    // Pour l'instant, retournons des données vides si pas de données réelles
+    const isEmpty = true // TODO: remplacer par une vraie logique de détection
+
+    if (isEmpty) {
+      // Données vides après réinitialisation
+      const emptyMetrics = {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        profitMargin: 0,
+        availableCash: 0,
+        totalBudgetAllocated: 0,
+        totalBudgetUsed: 0,
+        roi: 0,
+        cashBurnRate: 0,
+        runway: 0,
+        debtToEquityRatio: 0,
+        currentRatio: 0,
+        quickRatio: 0,
+        grossMargin: 0,
+        operatingMargin: 0,
+        netMargin: 0,
+        revenueGrowth: 0,
+        expenseGrowth: 0
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: emptyMetrics
+      })
+    }
+
     // Calcul des métriques basé sur les données réelles
     const metrics = {
       totalRevenue: 2500000,

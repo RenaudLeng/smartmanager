@@ -19,6 +19,18 @@ export async function GET() {
     //   orderBy: { createdAt: 'desc' }
     // })
 
+    // Vérifier si les données ont été réinitialisées
+    // Pour l'instant, retournons des données vides si pas de données réelles
+    const isEmpty = true // TODO: remplacer par une vraie logique de détection
+
+    if (isEmpty) {
+      // Données vides après réinitialisation
+      return NextResponse.json({
+        success: true,
+        data: []
+      })
+    }
+
     // Données calculées dynamiquement basées sur le tenant
     const budgetLines = [
       {
