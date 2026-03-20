@@ -168,21 +168,33 @@ export async function REGISTER(request: NextRequest) {
     })
 
     // Créer les catégories par défaut selon le type de business
-    const defaultCategories = {
+    const defaultCategories: Record<string, { name: string; description: string }[]> = {
       retail: [
-        { name: 'Alimentaire', description: 'Produits alimentaires de base' },
-        { name: 'Boissons', description: 'Boissons diverses' },
-        { name: 'Épicerie', description: 'Produits secs et conserves' },
-        { name: 'Hygiène', description: 'Produits de soin et hygiène' }
+        { name: 'Alimentation', description: 'Produits alimentaires et boissons' },
+        { name: 'Électronique', description: 'Appareils électroniques et accessoires' },
+        { name: 'Vêtements', description: 'Vêtements et textiles' },
+        { name: 'Hygiène', description: 'Produits de beauté et hygiène' }
       ],
       bar: [
-        { name: 'Bières', description: 'Différentes marques de bières' },
-        { name: 'Vins', description: 'Vins rouges, blancs et rosés' },
-        { name: 'Spirits', description: 'Whisky, vodka, rhum, etc.' },
-        { name: 'Softs', description: 'Boissons non alcoolisées' },
-        { name: 'Snacks', description: 'Chips, biscuits, fruits secs' }
+        { name: 'Boissons', description: 'Boissons alcoolisées et non alcoolisées' },
+        { name: 'Snacks', description: 'Snacks et nourriture à emporter' },
+        { name: 'Tabac', description: 'Cigarettes et produits du tabac' }
       ],
       restaurant: [
+        { name: 'Plats', description: 'Plats préparés et cuisinés' },
+        { name: 'Ingrédients', description: 'Ingrédients et matières premières' },
+        { name: 'Boissons', description: 'Boissons et desserts' }
+      ],
+      pharmacy: [
+        { name: 'Médicaments', description: 'Médicaments et produits pharmaceutiques' },
+        { name: 'Produits de soin', description: 'Produits de beauté et de soin personnel' },
+        { name: 'Équipement médical', description: 'Équipement médical et accessoires' }
+      ],
+      supermarket: [
+        { name: 'Épicerie', description: 'Produits d\'épicerie et de base' },
+        { name: 'Surgelés', description: 'Produits surgelés et conservés' },
+        { name: 'Boulangerie', description: 'Pain et produits de boulangerie' },
+        { name: 'Produits laitiers', description: 'Produits laitiers et dérivés' },
         { name: 'Entrées', description: 'Salades, soupes, apéritifs' },
         { name: 'Plats principaux', description: 'Plats chauds traditionnels' },
         { name: 'Desserts', description: 'Gâteaux, pâtisseries' },
@@ -193,8 +205,9 @@ export async function REGISTER(request: NextRequest) {
 
     if (defaultCategories[validatedData.businessType]) {
       await prisma.category.createMany({
-        data: defaultCategories[validatedData.businessType].map(cat => ({
-          ...cat,
+        data: defaultCategories[validatedData.businessType as keyof typeof defaultCategories].map(cat => ({
+          name: cat.name,
+          description: cat.description,
           tenantId: tenant.id
         }))
       })
