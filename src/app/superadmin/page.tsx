@@ -39,7 +39,7 @@ interface GlobalStats {
   activityRate?: number
 }
 
-const handleUserAction = (action: string, userId: string, data?: any) => {
+const handleUserAction = (action: string, userId: string, data?: unknown) => {
     console.log('User action:', action, userId, data)
   }
 
@@ -78,7 +78,7 @@ export default function SuperAdminPage() {
   const tabs = [
     { id: 'dashboard', label: 'Tableau de bord', icon: TrendingUp },
     { id: 'tenants', label: 'Tenants', icon: Building2 },
-    { id: 'users', label: 'Utilisateurs', icon: Users },
+    { id: 'users', label: 'Gestion des utilisateurs et permissions', icon: Users },
     { id: 'reports', label: 'Rapports', icon: Database },
     { id: 'settings', label: 'Paramètres', icon: Settings }
   ]
@@ -117,7 +117,7 @@ export default function SuperAdminPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'dashboard' | 'tenants' | 'users' | 'reports' | 'settings')}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
                   activeTab === tab.id
                     ? 'bg-orange-500 text-white'
