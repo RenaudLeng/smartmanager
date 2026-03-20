@@ -208,6 +208,9 @@ export default function SettingsPage() {
         localStorage.clear()
         sessionStorage.clear()
         
+        // Marquer la réinitialisation pour les hooks
+        localStorage.setItem('smartmanager-reset', 'true')
+        
         // Appeler l'API de réinitialisation
         const response = await fetch('/api/reset-data', {
           method: 'POST',

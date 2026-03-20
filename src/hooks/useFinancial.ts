@@ -24,6 +24,22 @@ export function useFinancial(): UseFinancialReturn {
   useEffect(() => {
     async function loadData() {
       try {
+        // Vérifier si les données ont été réinitialisées
+        const isReset = localStorage.getItem('smartmanager-reset')
+        if (isReset === 'true') {
+          console.log('Données réinitialisées - utilisation de données vides')
+          setState({
+            budgetLines: [],
+            transactions: [],
+            metrics: null,
+            reports: [],
+            loading: false,
+            error: null
+          })
+          localStorage.removeItem('smartmanager-reset')
+          return
+        }
+        
         const token = localStorage.getItem('token')
         
         // Load budget lines
