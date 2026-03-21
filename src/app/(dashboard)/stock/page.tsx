@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import { Package, Search, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
+import { useOptimizedData } from '@/hooks/useOptimizedData'
+import OptimizedLoading from '@/components/UI/OptimizedLoading'
 
 interface Product {
   id: string
@@ -23,8 +25,6 @@ interface Product {
 
 export default function StockPage() {
   const { state: financialState } = useFinancial()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
@@ -49,89 +49,94 @@ export default function StockPage() {
     restockCost: ''
   })
 
-  // Charger les produits depuis l'API
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const token = localStorage.getItem('token')
-        
-        if (!token) {
-          console.log('Utilisateur non connecté - utilisation des données par défaut')
-          setProducts([])
-          setLoading(false)
-          return
-        }
-        
-        const response = await fetch('/api/products', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          // Transformer les données de l'API pour correspondre à l'interface Product
-          const transformedProducts = data.products?.map((product: {
-            id: string
-            name: string
-            description?: string
-            barcode?: string
-            purchasePrice: number
-            sellingPrice: number
-            quantity: number
-            minStock?: number
-            categoryId: string
-            supplierId?: string
-            expirationDate?: string
-            createdAt: string
-            updatedAt: string
-            category: {
-              id: string
-              name: string
-            }
-            supplier?: {
-              id: string
-              name: string
-            }
-          }) => ({
-            id: product.id,
-            name: product.name,
-            price: product.sellingPrice,
-            purchasePrice: product.purchasePrice,
-            stock: product.quantity || 0,
-            minStock: product.minStock || 0,
-            category: product.category?.name || 'Non catégorisé',
-            lastUpdated: product.updatedAt || new Date().toISOString().split('T')[0],
-            status: product.quantity <= 0 ? 'out_of_stock' : 
-                   product.quantity <= (product.minStock || 0) ? 'low_stock' : 'in_stock',
-            supplier: product.supplier?.name || 'Non spécifié',
-            image: null
-          })) || []
-          
-          setProducts(transformedProducts)
-        } else {
-          console.warn('Erreur lors du chargement des produits:', response.status)
-          setProducts([])
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des produits:', error)
-        setProducts([])
-      } finally {
-        setLoading(false)
+  // Hook optimisé pour charger les produits avec cache
+  const { data: productsData, loading, error, refetch } = useOptimizedData<Product[]>({
+    fetchFn: async () => {
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        console.log('Utilisateur non connecté - utilisation des données par défaut')
+        return []
       }
-    }
-    
-    loadProducts()
-  }, [])
-
-  const categories = ['all', ...new Set(products.map(p => p.category))]
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
-    return matchesSearch && matchesCategory
+      
+      const response = await fetch('/api/products', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des produits')
+      }
+      
+      const data = await response.json()
+      
+      // Transformer les données de l'API pour correspondre à l'interface Product
+      return data.products?.map((product: {
+        id: string
+        name: string
+        description?: string
+        barcode?: string
+        purchasePrice: number
+        sellingPrice: number
+        quantity: number
+        minStock?: number
+        categoryId: string
+        supplierId?: string
+        expirationDate?: string
+        createdAt: string
+        updatedAt: string
+        category: {
+          id: string
+          name: string
+        }
+        supplier?: {
+          id: string
+          name: string
+        }
+      }) => ({
+        id: product.id,
+        name: product.name,
+        price: product.sellingPrice,
+        purchasePrice: product.purchasePrice,
+        stock: product.quantity || 0,
+        minStock: product.minStock || 0,
+        category: product.category?.name || 'Non catégorisé',
+        supplier: product.supplier?.name || 'Non spécifié',
+        status: product.quantity === 0 ? 'out_of_stock' : 
+                product.quantity <= (product.minStock || 0) ? 'low_stock' : 'in_stock',
+        lastUpdated: product.updatedAt
+      })) || []
+    },
+    cacheKey: 'products_cache',
+    staleTime: 300000 // 5 minutes
   })
+
+  const products = productsData || []
+
+  // Memoization pour les catégories et filtres
+  const categories = useMemo(() => 
+    ['all', ...new Set(products.map(p => p.category))], 
+    [products]
+  )
+
+  const filteredProducts = useMemo(() => 
+    products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
+      return matchesSearch && matchesCategory
+    }), 
+    [products, searchTerm, selectedCategory]
+  )
+
+  // Optimisation des stats
+  const stats = useMemo(() => ({
+    total: products.length,
+    inStock: products.filter(p => p.status === 'in_stock').length,
+    lowStock: products.filter(p => p.status === 'low_stock').length,
+    outOfStock: products.filter(p => p.status === 'out_of_stock').length
+  }), [products])
 
 
   const handleAddProduct = async () => {
@@ -438,8 +443,8 @@ export default function StockPage() {
                 <tbody className="divide-y divide-slate-700">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                        Chargement des produits...
+                      <td colSpan={6} className="px-4 py-8">
+                        <OptimizedLoading size="lg" message="Chargement des produits..." showSkeleton skeletonLines={5} />
                       </td>
                     </tr>
                   ) : filteredProducts.length === 0 ? (
