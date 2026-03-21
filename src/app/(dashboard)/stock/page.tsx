@@ -487,7 +487,8 @@ export default function StockPage() {
                         </div>
                       </td>
                     </tr>
-                  )))
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>
