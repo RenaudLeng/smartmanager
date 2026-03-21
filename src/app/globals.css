@@ -406,3 +406,81 @@ body {
   background-color: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
 }
+
+/* Styles pour les listes déroulantes thème sombre */
+select {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+select option {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  padding: 8px 12px !important;
+}
+
+select option:hover,
+select option:checked {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Amélioration de la lisibilité pour les selects sombres */
+select:focus {
+  outline: none !important;
+  border-color: hsl(var(--ring)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+}
+
+/* Thème sombre spécifique pour les listes déroulantes */
+.dark-theme select {
+  background-color: rgb(var(--bg-secondary)) !important;
+  color: rgb(var(--text-primary)) !important;
+  border-color: rgb(var(--border-primary)) !important;
+}
+
+.dark-theme select option {
+  background-color: rgb(var(--bg-secondary)) !important;
+  color: rgb(var(--text-primary)) !important;
+  padding: 8px 12px !important;
+  border: none !important;
+}
+
+.dark-theme select option:hover,
+.dark-theme select option:checked {
+  background-color: rgb(var(--orange-primary)) !important;
+  color: white !important;
+}
+
+.dark-theme select:focus {
+  outline: none !important;
+  border-color: rgb(var(--orange-primary)) !important;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.2) !important;
+}
+
+/* Thème clair pour les listes déroulantes */
+.light-theme select {
+  background-color: rgb(var(--bg-card)) !important;
+  color: rgb(var(--text-primary)) !important;
+  border-color: rgb(var(--border-primary)) !important;
+}
+
+.light-theme select option {
+  background-color: rgb(var(--bg-card)) !important;
+  color: rgb(var(--text-primary)) !important;
+  padding: 8px 12px !important;
+  border: none !important;
+}
+
+.light-theme select option:hover,
+.light-theme select option:checked {
+  background-color: rgb(var(--orange-primary)) !important;
+  color: white !important;
+}
+
+.light-theme select:focus {
+  outline: none !important;
+  border-color: rgb(var(--orange-primary)) !important;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.2) !important;
+}
