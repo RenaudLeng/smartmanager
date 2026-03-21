@@ -1,18 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useNotifications } from '@/hooks/useNotifications'
-import { TrendingUp, AlertTriangle, Package, DollarSign } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 interface StockAlert {
+  id: string
   name: string
-  status: 'FAIBLE' | 'CRITIQUE' | 'RUPTURE' | 'NORMAL'
-}
-
-interface Product {
-  name: string
-  quantity: number
+  currentStock: number
   minStock: number
+  status: 'FAIBLE' | 'CRITIQUE' | 'RUPTURE' | 'NORMAL'
 }
 
 interface SalesData {
@@ -29,238 +24,252 @@ interface ExpenseData {
   total: number
 }
 
-export function SmartAlerts() {
-  const { checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts } = useNotifications()
+interface Config {
+  dailyObjective: number
+  dailyExpenseLimit: number
+  minProfitMargin: number
+  lowStockThreshold: number
+}
+
+export default function SmartAlerts() {
   const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([])
-  const [stockData, setStockData] = useState({ lowStock: 0, totalProducts: 0 })
-  const [salesData, setSalesData] = useState({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
-  const [expenseData, setExpenseData] = useState({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+  const [salesData, setSalesData] = useState<SalesData>({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+  const [expenseData, setExpenseData] = useState<ExpenseData>({ daily: 0, weekly: 0, monthly: 0, total: 0 })
   const [profitMargin, setProfitMargin] = useState(0)
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<Config>({
     dailyObjective: 100000,
     dailyExpenseLimit: 50000,
     minProfitMargin: 15,
     lowStockThreshold: 10
   })
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Charger les données réelles depuis l'API
-    const loadData = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        
-        // Vérifier si le token existe avant de faire les appels API
-        if (!token) {
-          console.log('Pas de token trouvé, utilisation de données par défaut')
-          // Utiliser des données par défaut si pas authentifié
-          setStockAlerts([])
-          setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
-          setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
-          setProfitMargin(0)
-          return
-        }
-        
-        // Charger les produits pour alertes de stock
-        const productsResponse = await fetch('/api/products', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        
-        // Charger les ventes pour alertes de performance
-        const salesResponse = await fetch('/api/sales/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        
-        // Charger les dépenses pour alertes financières
-        const expensesResponse = await fetch('/api/expenses/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        
-        // Charger la configuration du tableau de bord
-        const configResponse = await fetch('/api/dashboard/config', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        
-        // Gérer les réponses même si elles échouent
-        let productsData = { data: [] }
-        let salesData = { data: { daily: 0, weekly: 0, monthly: 0, revenue: 0 } }
-        let expensesData = { data: { daily: 0, weekly: 0, monthly: 0, total: 0 } }
-        
-        if (productsResponse.ok) {
-          productsData = await productsResponse.json()
-        } else {
-          console.warn('Erreur chargement produits:', productsResponse.status)
-        }
-        
-        if (salesResponse.ok) {
-          salesData = await salesResponse.json()
-        } else {
-          console.warn('Erreur chargement ventes:', salesResponse.status)
-        }
-        
-        if (expensesResponse.ok) {
-          expensesData = await expensesResponse.json()
-        } else {
-          console.warn('Erreur chargement dépenses:', expensesResponse.status)
-        }
-        
-        let configData = { data: { dailyObjective: 100000, dailyExpenseLimit: 50000, minProfitMargin: 15, lowStockThreshold: 10 } }
-        if (configResponse.ok) {
-          configData = await configResponse.json()
-          setConfig(configData.data)
-        } else {
-          console.warn('Erreur chargement configuration:', configResponse.status)
-        }
-        
-        // Calculer la marge bénéficiaire
-        const profitMargin = salesData.data?.revenue ? 
-          ((salesData.data.revenue - expensesData.data.total) / salesData.data.revenue * 100) : 0
-        
-        // Générer les alertes de stock basées sur les produits réels
-        const alerts: StockAlert[] = productsData.data?.map((product: Product) => {
-          if (product.quantity <= 0) return { name: product.name, status: 'RUPTURE' as const }
-          if (product.quantity <= product.minStock * 0.5) return { name: product.name, status: 'CRITIQUE' as const }
-          if (product.quantity <= product.minStock) return { name: product.name, status: 'FAIBLE' as const }
-          return { name: product.name, status: 'NORMAL' as const }
-        }).filter((alert: StockAlert) => alert.status !== 'NORMAL').slice(0, 3) || []
-        
-        setStockAlerts(alerts)
-        setSalesData(salesData.data || { daily: 0, weekly: 0, monthly: 0, revenue: 0 })
-        setExpenseData(expensesData.data || { daily: 0, weekly: 0, monthly: 0, total: 0 })
-        setProfitMargin(profitMargin)
-        
-        checkStockAlerts(productsData.data || [])
-        checkSalesAlerts(salesData.data || { daily: 0, weekly: 0, monthly: 0 })
-        checkExpenseAlerts(expensesData.data || { daily: 0, weekly: 0, monthly: 0 })
-        checkProfitAlerts(profitMargin)
-        
-      } catch (error) {
-        console.error('Erreur lors du chargement des données pour alertes:', error)
-        // Utiliser des données par défaut en cas d'erreur
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        console.log('Pas de token trouvé, utilisation de données par défaut')
         setStockAlerts([])
         setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
         setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
         setProfitMargin(0)
+        return
       }
+      
+      // Charger les produits pour alertes de stock (avec retry)
+      let productsResponseData = { products: [] }
+      try {
+        const productsResponse = await fetch('/api/products', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (productsResponse.ok) {
+          productsResponseData = await productsResponse.json()
+        } else {
+          console.warn('Impossible de charger les produits, statut:', productsResponse.status)
+        }
+      } catch (error) {
+        console.warn('Erreur réseau lors du chargement des produits:', error)
+      }
+      
+      // Charger les ventes pour alertes de performance (avec retry)
+      let salesResponseData = { totalSales: 0, todaySales: 0 }
+      try {
+        const salesResponse = await fetch('/api/sales/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (salesResponse.ok) {
+          salesResponseData = await salesResponse.json()
+        } else {
+          console.warn('Impossible de charger les ventes, statut:', salesResponse.status)
+        }
+      } catch (error) {
+        console.warn('Erreur réseau lors du chargement des ventes:', error)
+      }
+      
+      // Charger les dépenses pour alertes financières (avec retry)
+      let expensesResponseData = { totalExpenses: 0, todayExpenses: 0 }
+      try {
+        const expensesResponse = await fetch('/api/expenses/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (expensesResponse.ok) {
+          expensesResponseData = await expensesResponse.json()
+        } else {
+          console.warn('Impossible de charger les dépenses, statut:', expensesResponse.status)
+        }
+      } catch (error) {
+        console.warn('Erreur réseau lors du chargement des dépenses:', error)
+      }
+      
+      // Charger la configuration du tableau de bord
+      let configResponseData = { data: { dailyObjective: 100000, dailyExpenseLimit: 50000, minProfitMargin: 15, lowStockThreshold: 10 } }
+      try {
+        const configResponse = await fetch('/api/dashboard/config', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (configResponse.ok) {
+          configResponseData = await configResponse.json()
+        }
+      } catch (error) {
+        console.warn('Erreur lors du chargement de la configuration:', error)
+      }
+      
+      // Traiter les données
+      const products = productsResponseData.products || []
+      const lowStockProducts = products.filter((product: any) => 
+        product.quantity <= (product.minStock || 10)
+      )
+      
+      setStockAlerts(lowStockProducts.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        currentStock: product.quantity,
+        minStock: product.minStock || 10,
+        status: product.quantity === 0 ? 'RUPTURE' : 
+                product.quantity <= (product.minStock || 10) / 2 ? 'CRITIQUE' : 'FAIBLE'
+      })))
+      
+      setSalesData({
+        daily: salesResponseData.todaySales || 0,
+        weekly: 0,
+        monthly: 0,
+        revenue: salesResponseData.totalSales || 0
+      })
+      
+      setExpenseData({
+        daily: expensesResponseData.todayExpenses || 0,
+        weekly: 0,
+        monthly: 0,
+        total: expensesResponseData.totalExpenses || 0
+      })
+      
+      if (configResponseData.data) {
+        setConfig(configResponseData.data)
+      }
+      
+      // Calculer la marge bénéficiaire
+      const margin = salesResponseData.totalSales ? 
+        ((salesResponseData.totalSales - expensesResponseData.totalExpenses) / salesResponseData.totalSales * 100) : 0
+      setProfitMargin(margin)
+      
+    } catch (error) {
+      console.warn('Erreur lors du chargement des données:', error)
+      setStockAlerts([])
+      setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+      setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+      setProfitMargin(0)
     }
+  }
 
-    // Charger les données immédiatement
+  useEffect(() => {
     loadData()
-    
-    // Vérifier périodiquement (toutes les 30 secondes)
-    const interval = setInterval(loadData, 30000)
+  }, [])
 
-    return () => clearInterval(interval)
-  }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts])
-
-  const salesProgress = config.dailyObjective > 0 ? (salesData.daily / config.dailyObjective * 100) : 0
-  const expenseStatus = expenseData.daily > config.dailyExpenseLimit ? 'DÉPASSÉ' : 'NORMAL'
-  const profitStatus = profitMargin >= config.minProfitMargin ? 'NORMAL' : 'SOUS MINIMUM'
+  const criticalStockAlerts = stockAlerts.filter(alert => alert.status === 'RUPTURE')
+  const lowStockAlerts = stockAlerts.filter(alert => alert.status === 'CRITIQUE')
+  const salesPerformance = salesData.daily >= config.dailyObjective ? 'EXCELLENT' : 
+                           salesData.daily >= config.dailyObjective * 0.8 ? 'BON' : 'FAIBLE'
+  const expenseStatus = expenseData.daily > config.dailyExpenseLimit ? 'ÉLEVÉ' : 'NORMAL'
+  const profitStatus = profitMargin >= config.minProfitMargin ? 'NORMAL' : 'FAIBLE'
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <Package className="h-8 w-8 text-yellow-400" />
-          <h3 className="text-white font-semibold">Alertes Stock</h3>
-        </div>
-        <div className="space-y-2">
-          {stockAlerts.length > 0 ? (
-            stockAlerts.map((alert, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <span className="text-gray-300 text-sm">{alert.name}</span>
-                <span className={`text-xs font-medium ${
-                  alert.status === 'RUPTURE' ? 'text-red-400' :
-                  alert.status === 'CRITIQUE' ? 'text-orange-400' :
-                  'text-yellow-400'
-                }`}>{alert.status}</span>
+    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-6">
+      <h3 className="text-lg font-semibold text-white mb-4">Alertes intelligentes</h3>
+      
+      {/* Alertes de stock */}
+      {(criticalStockAlerts.length > 0 || lowStockAlerts.length > 0) && (
+        <div className="space-y-3 mb-6">
+          {criticalStockAlerts.length > 0 && (
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <div>
+                  <p className="text-red-400 font-medium">Stock critique</p>
+                  <p className="text-red-300 text-sm">{criticalStockAlerts.length} produit(s) en rupture</p>
+                </div>
               </div>
-            ))
-          ) : (
-            <div className="text-green-400 text-sm">Stock critique</div>
+            </div>
           )}
-          {stockAlerts.length === 0 && (
-            <div className="text-green-400 text-sm">Tous les produits ont un stock suffisant</div>
+          
+          {lowStockAlerts.length > 0 && (
+            <div className="bg-orange-500/20 border border-orange-500/50 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                <div>
+                  <p className="text-orange-400 font-medium">Stock faible</p>
+                  <p className="text-orange-300 text-sm">{lowStockAlerts.length} produit(s) faible</p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
-      <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <TrendingUp className="h-8 w-8 text-blue-400" />
-          <h3 className="text-white font-semibold">Performance Ventes</h3>
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Objectif quotidien</span>
-            <span className="text-gray-400 text-sm">{config.dailyObjective.toLocaleString()} XAF</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Actuel</span>
-            <span className={`${salesProgress >= 85 ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
-              {salesData.daily.toLocaleString()} XAF
+      {/* Alertes de performance */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`border rounded-lg p-4 ${
+          salesPerformance === 'EXCELLENT' ? 'bg-green-500/20 border-green-500/50' :
+          salesPerformance === 'BON' ? 'bg-blue-500/20 border-blue-500/50' :
+          'bg-orange-500/20 border-orange-500/50'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-300 text-sm">Ventes du jour</span>
+            <span className={`text-sm font-medium ${
+              salesPerformance === 'EXCELLENT' ? 'text-green-400' :
+              salesPerformance === 'BON' ? 'text-blue-400' :
+              'text-orange-400'
+            }`}>
+              {salesPerformance}
             </span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Progression</span>
-            <span className={`${salesProgress >= 85 ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
-              {salesProgress.toFixed(1)}%
-            </span>
-          </div>
+          <p className="text-white text-lg font-semibold mt-1">
+            {salesData.daily.toLocaleString('fr-GA')} XAF
+          </p>
+          <p className="text-gray-400 text-xs mt-1">
+            Objectif: {config.dailyObjective.toLocaleString('fr-GA')} XAF
+          </p>
         </div>
-      </div>
 
-      <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <DollarSign className="h-8 w-8 text-red-400" />
-          <h3 className="text-white font-semibold">Contrôle Dépenses</h3>
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Limite quotidienne</span>
-            <span className="text-gray-400 text-sm">{config.dailyExpenseLimit.toLocaleString()} XAF</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Actuel</span>
-            <span className={`${expenseStatus === 'DÉPASSÉ' ? 'text-red-400' : 'text-green-400'} text-sm font-medium`}>
-              {expenseData.daily.toLocaleString()} XAF
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Statut</span>
-            <span className={`${expenseStatus === 'DÉPASSÉ' ? 'text-red-400' : 'text-green-400'} text-sm font-medium`}>
+        <div className={`border rounded-lg p-4 ${
+          expenseStatus === 'ÉLEVÉ' ? 'bg-red-500/20 border-red-500/50' :
+          'bg-green-500/20 border-green-500/50'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-300 text-sm">Dépenses du jour</span>
+            <span className={`text-sm font-medium ${
+              expenseStatus === 'ÉLEVÉ' ? 'text-red-400' : 'text-green-400'
+            }`}>
               {expenseStatus}
             </span>
           </div>
+          <p className="text-white text-lg font-semibold mt-1">
+            {expenseData.daily.toLocaleString('fr-GA')} XAF
+          </p>
+          <p className="text-gray-400 text-xs mt-1">
+            Limite: {config.dailyExpenseLimit.toLocaleString('fr-GA')} XAF
+          </p>
         </div>
-      </div>
 
-      <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <AlertTriangle className="h-8 w-8 text-orange-400" />
-          <h3 className="text-white font-semibold">Marge Bénéficiaire</h3>
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Marge minimale</span>
-            <span className="text-gray-400 text-sm">{config.minProfitMargin}%</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Actuelle</span>
-            <span className={`${profitStatus === 'NORMAL' ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
-              {profitMargin.toFixed(1)}%
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Statut</span>
-            <span className={`${profitStatus === 'NORMAL' ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
+        <div className={`border rounded-lg p-4 ${
+          profitStatus === 'NORMAL' ? 'bg-green-500/20 border-green-500/50' :
+          'bg-orange-500/20 border-orange-500/50'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-300 text-sm">Marge bénéficiaire</span>
+            <span className={`text-sm font-medium ${
+              profitStatus === 'NORMAL' ? 'text-green-400' : 'text-orange-400'
+            }`}>
               {profitStatus}
             </span>
           </div>
+          <p className="text-white text-lg font-semibold mt-1">
+            {profitMargin.toFixed(1)}%
+          </p>
+          <p className="text-gray-400 text-xs mt-1">
+            Minimum: {config.minProfitMargin}%
+          </p>
         </div>
       </div>
     </div>
   )
 }
-
-export default SmartAlerts
