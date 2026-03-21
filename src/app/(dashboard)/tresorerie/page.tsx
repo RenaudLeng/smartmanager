@@ -9,6 +9,7 @@ import {
   Clock,
   DollarSign
 } from 'lucide-react'
+import { useFinancial } from '@/hooks/useFinancial'
 
 interface FinancialMetrics {
   cashAvailable: number
@@ -23,6 +24,7 @@ interface FinancialMetrics {
 }
 
 export default function TresoreriePage() {
+  const { state, actions } = useFinancial()
   const [activeTab, setActiveTab] = useState('overview')
   const [metrics, setMetrics] = useState<FinancialMetrics>({
     cashAvailable: 0,
@@ -41,6 +43,61 @@ export default function TresoreriePage() {
   const [showTransactionModal, setShowTransactionModal] = useState(false)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
+
+  // État du formulaire de transaction
+  const [transactionForm, setTransactionForm] = useState({
+    type: 'revenue' as 'revenue' | 'expense',
+    amount: '',
+    description: '',
+    category: '',
+    date: new Date().toISOString().split('T')[0],
+    source: {
+      type: 'cash' as 'cash' | 'bank' | 'mobile',
+      budgetLineId: ''
+    }
+  })
+
+  const handleTransactionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      if (!transactionForm.amount || !transactionForm.description) {
+        alert('Veuillez remplir tous les champs obligatoires')
+        return
+      }
+
+      const transaction = {
+        type: transactionForm.type,
+        amount: parseFloat(transactionForm.amount),
+        description: transactionForm.description,
+        category: transactionForm.category || 'Général',
+        date: transactionForm.date,
+        source: transactionForm.source,
+        currency: 'XAF'
+      }
+
+      await actions.addTransaction(transaction)
+      
+      // Réinitialiser le formulaire et fermer le modal
+      setTransactionForm({
+        type: 'revenue',
+        amount: '',
+        description: '',
+        category: '',
+        date: new Date().toISOString().split('T')[0],
+        source: {
+          type: 'cash',
+          budgetLineId: ''
+        }
+      })
+      setShowTransactionModal(false)
+      
+      alert('Transaction ajoutée avec succès!')
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la transaction:', error)
+      alert('Erreur lors de l\'ajout de la transaction')
+    }
+  }
 
   useEffect(() => {
     loadFinancialMetrics()
@@ -328,16 +385,103 @@ export default function TresoreriePage() {
 
       {/* Modal Transaction */}
       {showTransactionModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-9999">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-2xl relative">
             <h3 className="text-xl font-bold text-white mb-6">Ajouter une transaction</h3>
-            <p className="text-gray-400 mb-4">Module de transaction en cours de développement</p>
-            <button
-              onClick={() => setShowTransactionModal(false)}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors"
-            >
-              Fermer
-            </button>
+            
+            <form onSubmit={handleTransactionSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Type de transaction</label>
+                  <select
+                    value={transactionForm.type}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value as 'revenue' | 'expense' })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="revenue">Revenu</option>
+                    <option value="expense">Dépense</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Montant (XAF)</label>
+                  <input
+                    type="number"
+                    value={transactionForm.amount}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                  <input
+                    type="text"
+                    value={transactionForm.description}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
+                    placeholder="Description de la transaction"
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Catégorie</label>
+                  <input
+                    type="text"
+                    value={transactionForm.category}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, category: e.target.value })}
+                    placeholder="Général"
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={transactionForm.date}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, date: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Source</label>
+                  <select
+                    value={transactionForm.source.type}
+                    onChange={(e) => setTransactionForm({ 
+                      ...transactionForm, 
+                      source: { ...transactionForm.source, type: e.target.value as 'cash' | 'bank' | 'mobile' }
+                    })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="cash">Espèces</option>
+                    <option value="bank">Banque</option>
+                    <option value="mobile">Mobile Money</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowTransactionModal(false)}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Ajouter la transaction
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
