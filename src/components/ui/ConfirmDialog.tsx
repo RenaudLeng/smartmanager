@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react'
+import { useState } from 'react'
 
 interface ConfirmDialogProps {
   isOpen: boolean
@@ -33,9 +33,7 @@ export function useConfirmDialog() {
 
   const ConfirmDialogComponent = dialog ? (
     <ConfirmDialog {...dialog} />
-  ) : (
-    <Fragment />
-  )
+  ) : null
 
   return { confirm, ConfirmDialogComponent }
 }
@@ -121,9 +119,7 @@ export function useNotifications() {
         </div>
       ))}
     </div>
-  ) : (
-    <Fragment />
-  )
+  ) : null
 
   return {
     notifications,

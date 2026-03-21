@@ -192,7 +192,7 @@ export default function DashboardPage() {
         setStats(data)
       } catch (error) {
         console.error('Erreur:', error)
-        showNotification('error', 'Erreur lors du chargement des statistiques')
+        showNotification('Erreur lors du chargement des statistiques', 'error')
       } finally {
         setLoading(false)
       }
@@ -307,8 +307,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Composants partagés */}
-      <ConfirmDialogComponent />
-      <NotificationComponent />
+      {ConfirmDialogComponent}
+      {NotificationComponent}
     </div>
   )
 }
