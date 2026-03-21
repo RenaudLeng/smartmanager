@@ -46,15 +46,33 @@ export default function TresoreriePage() {
 
   // État du formulaire de transaction
   const [transactionForm, setTransactionForm] = useState({
-    type: 'revenue' as 'revenue' | 'expense',
+    type: 'income' as 'income' | 'expense',
     amount: '',
     description: '',
     category: '',
     date: new Date().toISOString().split('T')[0],
     source: {
-      type: 'cash' as 'cash' | 'bank' | 'mobile',
+      type: 'cash' as 'cash' | 'budget_line' | 'bank_transfer',
       budgetLineId: ''
     }
+  })
+
+  // État du formulaire de ligne budgétaire
+  const [budgetForm, setBudgetForm] = useState({
+    name: '',
+    description: '',
+    allocatedAmount: '',
+    currentAmount: '',
+    initialAmount: '',
+    type: 'funds' as 'funds' | 'loan' | 'investment' | 'grant',
+    period: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly'
+  })
+
+  // État du formulaire de rapport
+  const [reportForm, setReportForm] = useState({
+    type: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly',
+    start: '',
+    end: ''
   })
 
   const handleTransactionSubmit = async (e: React.FormEvent) => {
@@ -67,7 +85,7 @@ export default function TresoreriePage() {
       }
 
       const transaction = {
-        type: transactionForm.type,
+        type: transactionForm.type as 'income' | 'expense',
         amount: parseFloat(transactionForm.amount),
         description: transactionForm.description,
         category: transactionForm.category || 'Général',
@@ -80,7 +98,7 @@ export default function TresoreriePage() {
       
       // Réinitialiser le formulaire et fermer le modal
       setTransactionForm({
-        type: 'revenue',
+        type: 'income',
         amount: '',
         description: '',
         category: '',
@@ -96,6 +114,76 @@ export default function TresoreriePage() {
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la transaction:', error)
       alert('Erreur lors de l\'ajout de la transaction')
+    }
+  }
+
+  const handleBudgetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      if (!budgetForm.name || !budgetForm.allocatedAmount) {
+        alert('Veuillez remplir tous les champs obligatoires')
+        return
+      }
+
+      const budgetLine = {
+        name: budgetForm.name,
+        description: budgetForm.description,
+        allocatedAmount: parseFloat(budgetForm.allocatedAmount),
+        currentAmount: parseFloat(budgetForm.currentAmount) || 0,
+        initialAmount: parseFloat(budgetForm.initialAmount) || parseFloat(budgetForm.allocatedAmount),
+        type: budgetForm.type as 'funds' | 'loan' | 'investment' | 'grant',
+        period: budgetForm.period,
+        currency: 'XAF'
+      }
+
+      await actions.createBudgetLine(budgetLine)
+      
+      // Réinitialiser le formulaire et fermer le modal
+      setBudgetForm({
+        name: '',
+        description: '',
+        allocatedAmount: '',
+        currentAmount: '',
+        initialAmount: '',
+        type: 'funds',
+        period: 'monthly'
+      })
+      setShowBudgetModal(false)
+      
+      alert('Ligne budgétaire créée avec succès!')
+    } catch (error) {
+      console.error('Erreur lors de la création de la ligne budgétaire:', error)
+      alert('Erreur lors de la création de la ligne budgétaire')
+    }
+  }
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      if (!reportForm.start || !reportForm.end) {
+        alert('Veuillez sélectionner une période')
+        return
+      }
+
+      await actions.generateReport(reportForm.type, {
+        start: reportForm.start,
+        end: reportForm.end
+      })
+      
+      // Réinitialiser le formulaire et fermer le modal
+      setReportForm({
+        type: 'monthly',
+        start: '',
+        end: ''
+      })
+      setShowReportModal(false)
+      
+      alert('Rapport généré avec succès!')
+    } catch (error) {
+      console.error('Erreur lors de la génération du rapport:', error)
+      alert('Erreur lors de la génération du rapport')
     }
   }
 
@@ -395,10 +483,10 @@ export default function TresoreriePage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Type de transaction</label>
                   <select
                     value={transactionForm.type}
-                    onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value as 'revenue' | 'expense' })}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value as 'income' | 'expense' })}
                     className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
-                    <option value="revenue">Revenu</option>
+                    <option value="income">Revenu</option>
                     <option value="expense">Dépense</option>
                   </select>
                 </div>
@@ -488,32 +576,169 @@ export default function TresoreriePage() {
 
       {/* Modal Budget */}
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-9999">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-2xl relative">
             <h3 className="text-xl font-bold text-white mb-6">Créer une ligne budgétaire</h3>
-            <p className="text-gray-400 mb-4">Module de budget en cours de développement</p>
-            <button
-              onClick={() => setShowBudgetModal(false)}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors"
-            >
-              Fermer
-            </button>
+            
+            <form onSubmit={handleBudgetSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Nom de la ligne</label>
+                  <input
+                    type="text"
+                    value={budgetForm.name}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, name: e.target.value })}
+                    placeholder="Ex: Salaires, Marketing, etc."
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
+                  <select
+                    value={budgetForm.type}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, type: e.target.value as 'funds' | 'loan' | 'investment' | 'grant' })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="funds">Fonds propres</option>
+                    <option value="loan">Prêt</option>
+                    <option value="investment">Investissement</option>
+                    <option value="grant">Subvention</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Montant alloué (XAF)</label>
+                  <input
+                    type="number"
+                    value={budgetForm.allocatedAmount}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, allocatedAmount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Montant actuel (XAF)</label>
+                  <input
+                    type="number"
+                    value={budgetForm.currentAmount}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, currentAmount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Période</label>
+                  <select
+                    value={budgetForm.period}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, period: e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly' })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="daily">Journalier</option>
+                    <option value="weekly">Hebdomadaire</option>
+                    <option value="monthly">Mensuel</option>
+                    <option value="yearly">Annuel</option>
+                  </select>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                  <textarea
+                    value={budgetForm.description}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, description: e.target.value })}
+                    placeholder="Description détaillée de la ligne budgétaire..."
+                    rows={3}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowBudgetModal(false)}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Créer la ligne budgétaire
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Modal Report */}
       {showReportModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-9999">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-2xl relative">
             <h3 className="text-xl font-bold text-white mb-6">Générer un rapport</h3>
-            <p className="text-gray-400 mb-4">Module de rapport en cours de développement</p>
-            <button
-              onClick={() => setShowReportModal(false)}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors"
-            >
-              Fermer
-            </button>
+            
+            <form onSubmit={handleReportSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Type de rapport</label>
+                  <select
+                    value={reportForm.type}
+                    onChange={(e) => setReportForm({ ...reportForm, type: e.target.value as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="daily">Journalier</option>
+                    <option value="weekly">Hebdomadaire</option>
+                    <option value="monthly">Mensuel</option>
+                    <option value="quarterly">Trimestriel</option>
+                    <option value="yearly">Annuel</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Date de début</label>
+                  <input
+                    type="date"
+                    value={reportForm.start}
+                    onChange={(e) => setReportForm({ ...reportForm, start: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Date de fin</label>
+                  <input
+                    type="date"
+                    value={reportForm.end}
+                    onChange={(e) => setReportForm({ ...reportForm, end: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Générer le rapport
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
