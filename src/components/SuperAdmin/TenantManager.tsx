@@ -19,6 +19,7 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 interface Tenant {
   id: string
@@ -285,8 +286,7 @@ export default function TenantManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-        <span className="ml-3 text-gray-400">Chargement des tenants...</span>
+        <LoadingSpinner size="lg" text="Chargement des tenants..." />
       </div>
     )
   }

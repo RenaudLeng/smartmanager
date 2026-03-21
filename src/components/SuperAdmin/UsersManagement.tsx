@@ -18,8 +18,13 @@ import {
   UserPlus,
   UserCheck,
   UserX,
-  Eye
+  Eye,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Clock
 } from 'lucide-react'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import apiService from '@/services/api'
 
 interface UserManagementProps {
@@ -155,7 +160,7 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        <LoadingSpinner size="lg" text="Chargement des utilisateurs..." />
       </div>
     )
   }

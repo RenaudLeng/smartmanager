@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader, NotFoundException, Result } from '@zxing/library'
 import { X, Camera, AlertCircle } from 'lucide-react'
+import ModernSpinner from '@/components/ui/ModernSpinner'
 
 interface ScannerModalProps {
   onClose: () => void
@@ -240,10 +241,7 @@ export function ScannerModal({ onClose, onScanSuccess }: ScannerModalProps) {
       <div className="flex-1 relative">
         {isLoading && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-              <p className="text-white">Initialisation de la caméra...</p>
-            </div>
+            <ModernSpinner size="lg" variant="pulse" color="orange" text="Initialisation de la caméra..." />
           </div>
         )}
 
