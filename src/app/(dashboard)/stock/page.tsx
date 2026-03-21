@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Package, Search, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
@@ -23,19 +23,10 @@ interface Product {
 
 export default function StockPage() {
   const { state: financialState } = useFinancial()
-  const [products, setProducts] = useState<Product[]>([
-    { id: '1', name: 'Riz gabonais 1kg', price: 1500, stock: 50, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Import Gabon' },
-    { id: '2', name: 'Huile de palme 1L', price: 2500, stock: 8, minStock: 10, category: 'Alimentaire', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Société Palmier' },
-    { id: '3', name: 'Poulet congelé 5kg', price: 15000, stock: 0, minStock: 5, category: 'Viande', lastUpdated: '2024-03-09', status: 'out_of_stock', supplier: 'Gabon Frigorifique' },
-    { id: '4', name: 'Tomates 1kg', price: 2000, stock: 25, minStock: 15, category: 'Légumes', lastUpdated: '2024-03-10', status: 'in_stock', supplier: 'Maraîcher Local' },
-    { id: '5', name: 'Pain de mie', price: 800, stock: 3, minStock: 10, category: 'Boulangerie', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Boulangerie du Centre' },
-    { id: '6', name: 'Sucre 1kg', price: 1200, stock: 45, minStock: 20, category: 'Épicerie', lastUpdated: '2024-03-08', status: 'in_stock', supplier: 'Sucrierie du Gabon' },
-    { id: '7', name: 'Lait 1L', price: 1800, stock: 12, minStock: 15, category: 'Produits laitiers', lastUpdated: '2024-03-10', status: 'low_stock', supplier: 'Laiterie Gabonaise' },
-    { id: '8', name: 'Farine 1kg', price: 2500, stock: 30, minStock: 25, category: 'Épicerie', lastUpdated: '2024-03-09', status: 'in_stock', supplier: 'Moulin du Gabon' }
-  ])
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  // Pas de loading - données disponibles immédiatement
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -58,6 +49,59 @@ export default function StockPage() {
     restockCost: ''
   })
 
+  // Charger les produits depuis l'API
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const token = localStorage.getItem('token')
+        
+        if (!token) {
+          console.log('Utilisateur non connecté - utilisation des données par défaut')
+          setProducts([])
+          setLoading(false)
+          return
+        }
+        
+        const response = await fetch('/api/products', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          // Transformer les données de l'API pour correspondre à l'interface Product
+          const transformedProducts = data.data?.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            purchasePrice: product.purchasePrice,
+            stock: product.quantity || 0,
+            minStock: product.minStock || 0,
+            category: product.category?.name || 'Non catégorisé',
+            lastUpdated: product.updatedAt || new Date().toISOString().split('T')[0],
+            status: product.quantity <= 0 ? 'out_of_stock' : 
+                   product.quantity <= product.minStock ? 'low_stock' : 'in_stock',
+            supplier: product.supplier?.name || 'Non spécifié',
+            image: product.image
+          })) || []
+          
+          setProducts(transformedProducts)
+        } else {
+          console.warn('Erreur lors du chargement des produits:', response.status)
+          setProducts([])
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits:', error)
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadProducts()
+  }, [])
 
   const categories = ['all', ...new Set(products.map(p => p.category))]
 
@@ -370,7 +414,22 @@ export default function StockPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {filteredProducts.map((product) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                        Chargement des produits...
+                      </td>
+                    </tr>
+                  ) : filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                        {searchTerm || selectedCategory !== 'all' 
+                          ? 'Aucun produit trouvé correspondant à votre recherche' 
+                          : 'Aucun produit en stock. Ajoutez votre premier produit !'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((product) => (
                     <tr key={product.id} className="hover:bg-slate-700/50">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center cursor-pointer hover:bg-white/5 p-2 rounded -mx-2" onClick={() => handleProductClick(product)}>
@@ -428,7 +487,7 @@ export default function StockPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))
                 </tbody>
               </table>
             </div>
