@@ -262,3 +262,5 @@ export function SmartAlerts() {
     </div>
   )
 }
+
+export default SmartAlerts

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrendingUp, DollarSign, ShoppingCart, Users, AlertTriangle, Wallet, ArrowUp, ArrowDown, Plus, Package, Calculator } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
-import { SmartAlerts } from '@/components/Notifications/SmartAlerts'
+import SmartAlerts from '@/components/Notifications/SmartAlerts'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface DashboardStats {
