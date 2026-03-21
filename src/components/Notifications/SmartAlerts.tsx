@@ -31,6 +31,7 @@ interface ExpenseData {
 
 export function SmartAlerts() {
   const { checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts } = useNotifications()
+  const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([])
   const [stockData, setStockData] = useState({ lowStock: 0, totalProducts: 0 })
   const [salesData, setSalesData] = useState({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
   const [expenseData, setExpenseData] = useState({ daily: 0, weekly: 0, monthly: 0, total: 0 })
