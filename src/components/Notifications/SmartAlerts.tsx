@@ -1,11 +1,34 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { TrendingUp, AlertTriangle, Package, DollarSign } from 'lucide-react'
 
+interface StockAlert {
+  name: string
+  status: 'FAIBLE' | 'CRITIQUE' | 'RUPTURE' | 'NORMAL'
+}
+
+interface SalesData {
+  daily: number
+  weekly: number
+  monthly: number
+  revenue: number
+}
+
+interface ExpenseData {
+  daily: number
+  weekly: number
+  monthly: number
+  total: number
+}
+
 export function SmartAlerts() {
   const { checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts } = useNotifications()
+  const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([])
+  const [salesData, setSalesData] = useState<SalesData>({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+  const [expenseData, setExpenseData] = useState<ExpenseData>({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+  const [profitMargin, setProfitMargin] = useState(0)
 
   useEffect(() => {
     // Charger les données réelles depuis l'API
@@ -17,10 +40,10 @@ export function SmartAlerts() {
         if (!token) {
           console.log('Pas de token trouvé, utilisation de données par défaut')
           // Utiliser des données par défaut si pas authentifié
-          checkStockAlerts([])
-          checkSalesAlerts({ daily: 0, weekly: 0, monthly: 0 })
-          checkExpenseAlerts({ daily: 0, weekly: 0, monthly: 0 })
-          checkProfitAlerts(0)
+          setStockAlerts([])
+          setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+          setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+          setProfitMargin(0)
           return
         }
         
@@ -66,6 +89,19 @@ export function SmartAlerts() {
         const profitMargin = salesData.data?.revenue ? 
           ((salesData.data.revenue - expensesData.data.total) / salesData.data.revenue * 100) : 0
         
+        // Générer les alertes de stock basées sur les produits réels
+        const alerts: StockAlert[] = productsData.data?.map((product: any) => {
+          if (product.quantity <= 0) return { name: product.name, status: 'RUPTURE' }
+          if (product.quantity <= product.minStock * 0.5) return { name: product.name, status: 'CRITIQUE' }
+          if (product.quantity <= product.minStock) return { name: product.name, status: 'FAIBLE' }
+          return { name: product.name, status: 'NORMAL' }
+        }).filter((alert: StockAlert) => alert.status !== 'NORMAL').slice(0, 3) || []
+        
+        setStockAlerts(alerts)
+        setSalesData(salesData.data || { daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+        setExpenseData(expensesData.data || { daily: 0, weekly: 0, monthly: 0, total: 0 })
+        setProfitMargin(profitMargin)
+        
         checkStockAlerts(productsData.data || [])
         checkSalesAlerts(salesData.data || { daily: 0, weekly: 0, monthly: 0 })
         checkExpenseAlerts(expensesData.data || { daily: 0, weekly: 0, monthly: 0 })
@@ -74,10 +110,10 @@ export function SmartAlerts() {
       } catch (error) {
         console.error('Erreur lors du chargement des données pour alertes:', error)
         // Utiliser des données par défaut en cas d'erreur
-        checkStockAlerts([])
-        checkSalesAlerts({ daily: 0, weekly: 0, monthly: 0 })
-        checkExpenseAlerts({ daily: 0, weekly: 0, monthly: 0 })
-        checkProfitAlerts(0)
+        setStockAlerts([])
+        setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+        setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+        setProfitMargin(0)
       }
     }
 
@@ -88,7 +124,14 @@ export function SmartAlerts() {
     const interval = setInterval(loadData, 30000)
 
     return () => clearInterval(interval)
-  }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts])
+  }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlert])
+
+  const dailyObjective = 100000
+  const dailyExpenseLimit = 50000
+  const minProfitMargin = 15
+  const salesProgress = dailyObjective > 0 ? (salesData.daily / dailyObjective * 100) : 0
+  const expenseStatus = expenseData.daily > dailyExpenseLimit ? 'DÉPASSÉ' : 'NORMAL'
+  const profitStatus = profitMargin >= minProfitMargin ? 'NORMAL' : 'SOUS MINIMUM'
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -98,18 +141,23 @@ export function SmartAlerts() {
           <h3 className="text-white font-semibold">Alertes Stock</h3>
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Riz gabonais</span>
-            <span className="text-yellow-400 text-xs font-medium">FAIBLE</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Huile de palme</span>
-            <span className="text-orange-400 text-xs font-medium">CRITIQUE</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300 text-sm">Farine de manioc</span>
-            <span className="text-red-400 text-xs font-medium">RUPTURE</span>
-          </div>
+          {stockAlerts.length > 0 ? (
+            stockAlerts.map((alert, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-gray-300 text-sm">{alert.name}</span>
+                <span className={`text-xs font-medium ${
+                  alert.status === 'RUPTURE' ? 'text-red-400' :
+                  alert.status === 'CRITIQUE' ? 'text-orange-400' :
+                  'text-yellow-400'
+                }`}>{alert.status}</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-green-400 text-sm">Stock critique</div>
+          )}
+          {stockAlerts.length === 0 && (
+            <div className="text-green-400 text-sm">Tous les produits ont un stock suffisant</div>
+          )}
         </div>
       </div>
 
@@ -121,15 +169,19 @@ export function SmartAlerts() {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Objectif quotidien</span>
-            <span className="text-gray-400 text-sm">100,000 XAF</span>
+            <span className="text-gray-400 text-sm">{dailyObjective.toLocaleString()} XAF</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Actuel</span>
-            <span className="text-orange-400 text-sm font-medium">85,000 XAF</span>
+            <span className={`${salesProgress >= 85 ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
+              {salesData.daily.toLocaleString()} XAF
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Progression</span>
-            <span className="text-orange-400 text-sm font-medium">85%</span>
+            <span className={`${salesProgress >= 85 ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
+              {salesProgress.toFixed(1)}%
+            </span>
           </div>
         </div>
       </div>
@@ -142,15 +194,19 @@ export function SmartAlerts() {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Limite quotidienne</span>
-            <span className="text-gray-400 text-sm">50,000 XAF</span>
+            <span className="text-gray-400 text-sm">{dailyExpenseLimit.toLocaleString()} XAF</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Actuel</span>
-            <span className="text-red-400 text-sm font-medium">65,000 XAF</span>
+            <span className={`${expenseStatus === 'DÉPASSÉ' ? 'text-red-400' : 'text-green-400'} text-sm font-medium`}>
+              {expenseData.daily.toLocaleString()} XAF
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Statut</span>
-            <span className="text-red-400 text-sm font-medium">DÉPASSÉ</span>
+            <span className={`${expenseStatus === 'DÉPASSÉ' ? 'text-red-400' : 'text-green-400'} text-sm font-medium`}>
+              {expenseStatus}
+            </span>
           </div>
         </div>
       </div>
@@ -163,15 +219,19 @@ export function SmartAlerts() {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Marge minimale</span>
-            <span className="text-gray-400 text-sm">15%</span>
+            <span className="text-gray-400 text-sm">{minProfitMargin}%</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Actuelle</span>
-            <span className="text-orange-400 text-sm font-medium">12.5%</span>
+            <span className={`${profitStatus === 'NORMAL' ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
+              {profitMargin.toFixed(1)}%
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Statut</span>
-            <span className="text-orange-400 text-sm font-medium">SOUS MINIMUM</span>
+            <span className={`${profitStatus === 'NORMAL' ? 'text-green-400' : 'text-orange-400'} text-sm font-medium`}>
+              {profitStatus}
+            </span>
           </div>
         </div>
       </div>
