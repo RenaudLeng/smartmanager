@@ -116,11 +116,21 @@ export default function SmartAlerts() {
       
       // Traiter les données
       const products = productsResponseData.products || []
-      const lowStockProducts = products.filter((product: any) => 
+      const lowStockProducts = products.filter((product: {
+        id: string
+        name: string
+        quantity: number
+        minStock?: number
+      }) => 
         product.quantity <= (product.minStock || 10)
       )
       
-      setStockAlerts(lowStockProducts.map((product: any) => ({
+      setStockAlerts(lowStockProducts.map((product: {
+        id: string
+        name: string
+        quantity: number
+        minStock?: number
+      }) => ({
         id: product.id,
         name: product.name,
         currentStock: product.quantity,
@@ -162,7 +172,10 @@ export default function SmartAlerts() {
   }
 
   useEffect(() => {
-    loadData()
+    const loadDataAsync = async () => {
+      await loadData()
+    }
+    loadDataAsync()
   }, [])
 
   const criticalStockAlerts = stockAlerts.filter(alert => alert.status === 'RUPTURE')
