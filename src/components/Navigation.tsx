@@ -110,6 +110,12 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
       roles: ['super_admin', 'admin']
     },
     {
+      name: 'Paramètres',
+      href: '/parametres',
+      icon: Settings,
+      roles: ['super_admin', 'admin']
+    },
+    {
       name: 'SuperAdmin',
       href: '/superadmin',
       icon: Shield,
