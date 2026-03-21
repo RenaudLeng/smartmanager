@@ -9,6 +9,12 @@ interface StockAlert {
   status: 'FAIBLE' | 'CRITIQUE' | 'RUPTURE' | 'NORMAL'
 }
 
+interface Product {
+  name: string
+  quantity: number
+  minStock: number
+}
+
 interface SalesData {
   daily: number
   weekly: number
@@ -90,11 +96,11 @@ export function SmartAlerts() {
           ((salesData.data.revenue - expensesData.data.total) / salesData.data.revenue * 100) : 0
         
         // Générer les alertes de stock basées sur les produits réels
-        const alerts: StockAlert[] = productsData.data?.map((product: any) => {
-          if (product.quantity <= 0) return { name: product.name, status: 'RUPTURE' }
-          if (product.quantity <= product.minStock * 0.5) return { name: product.name, status: 'CRITIQUE' }
-          if (product.quantity <= product.minStock) return { name: product.name, status: 'FAIBLE' }
-          return { name: product.name, status: 'NORMAL' }
+        const alerts: StockAlert[] = productsData.data?.map((product: Product) => {
+          if (product.quantity <= 0) return { name: product.name, status: 'RUPTURE' as const }
+          if (product.quantity <= product.minStock * 0.5) return { name: product.name, status: 'CRITIQUE' as const }
+          if (product.quantity <= product.minStock) return { name: product.name, status: 'FAIBLE' as const }
+          return { name: product.name, status: 'NORMAL' as const }
         }).filter((alert: StockAlert) => alert.status !== 'NORMAL').slice(0, 3) || []
         
         setStockAlerts(alerts)
@@ -124,7 +130,7 @@ export function SmartAlerts() {
     const interval = setInterval(loadData, 30000)
 
     return () => clearInterval(interval)
-  }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlert])
+  }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts])
 
   const dailyObjective = 100000
   const dailyExpenseLimit = 50000
