@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Users, Shield, Clock, Edit, Trash2, Grid, List, X } from 'lucide-react'
 
 interface Employee {
@@ -37,125 +37,46 @@ interface Role {
 }
 
 export default function EmployesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([
-        {
-          id: '1',
-          name: 'Jean-Baptiste Ondo',
-          email: 'jb.ondo@smartmanager.ga',
-          phone: '+241 07 23 45 67',
-          role: 'admin',
-          department: 'Direction',
-          salary: 500000,
-          status: 'active',
-          permissions: {
-            dashboard: true,
-            sales: true,
-            inventory: true,
-            financial: true,
-            reports: true,
-            users: true,
-            settings: true
-          },
-          hireDate: '2023-01-15',
-          createdAt: '2023-01-15',
-          updatedAt: '2024-03-01'
-        },
-        {
-          id: '2',
-          name: 'Marie-Antoinette Nkoulou',
-          email: 'ma.nkoulou@smartmanager.ga',
-          phone: '+241 07 34 56 78',
-          role: 'manager',
-          department: 'Direction',
-          salary: 450000,
-          status: 'active',
-          permissions: {
-            dashboard: true,
-            sales: true,
-            inventory: true,
-            financial: false,
-            reports: true,
-            users: true,
-            settings: false
-          },
-          hireDate: '2023-02-01',
-          createdAt: '2023-02-01',
-          updatedAt: '2024-03-01'
-        },
-        {
-          id: '3',
-          name: 'Paulin Mba',
-          email: 'p.mba@smartmanager.ga',
-          phone: '+241 07 45 67 89',
-          role: 'cashier',
-          department: 'Ventes',
-          salary: 350000,
-          status: 'active',
-          permissions: {
-            dashboard: false,
-            sales: true,
-            inventory: true,
-            financial: false,
-            reports: false,
-            users: false,
-            settings: false
-          },
-          hireDate: '2023-03-15',
-          createdAt: '2023-03-15',
-          updatedAt: '2024-03-01'
-        },
-        {
-          id: '4',
-          name: 'Cécile Nzoghe',
-          email: 'c.nzoghe@smartmanager.ga',
-          phone: '+241 07 56 78 90',
-          role: 'seller',
-          department: 'Ventes',
-          salary: 300000,
-          status: 'active',
-          permissions: {
-            dashboard: false,
-            sales: true,
-            inventory: true,
-            financial: false,
-            reports: false,
-            users: false,
-            settings: false
-          },
-          hireDate: '2023-04-10',
-          createdAt: '2023-04-10',
-          updatedAt: '2024-03-01'
-        },
-        {
-          id: '5',
-          name: 'Joseph Ndong',
-          email: 'j.ndong@smartmanager.ga',
-          phone: '+241 07 67 89 01',
-          role: 'stock_manager',
-          department: 'Stock',
-          salary: 400000,
-          status: 'active',
-          permissions: {
-            dashboard: false,
-            sales: false,
-            inventory: true,
-            financial: false,
-            reports: false,
-            users: false,
-            settings: false
-          },
-          hireDate: '2023-06-01',
-          createdAt: '2023-06-01',
-          updatedAt: '2024-03-01'
-        }
-      ])
-
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+
+  useEffect(() => {
+    loadEmployees()
+  }, [])
+
+  const loadEmployees = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const resetFlag = localStorage.getItem('smartmanager-reset')
+
+      const response = await fetch('/api/employees', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-reset-flag': resetFlag || 'false'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setEmployees(result.data || [])
+      } else {
+        console.error('Failed to load employees')
+        setEmployees([])
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error)
+      setEmployees([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const [newEmployee, setNewEmployee] = useState<Employee>({
     id: '',
     name: '',
@@ -349,7 +270,20 @@ export default function EmployesPage() {
         </div>
       </div>
             {/* Employees Display */}
-      {viewMode === 'grid' ? (
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Chargement des employés...</p>
+        </div>
+      ) : filteredEmployees.length === 0 ? (
+        <div className="text-center py-12">
+          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">Aucun employé trouvé</h3>
+          <p className="text-gray-400">
+            {searchTerm ? 'Essayez de modifier votre recherche' : 'Commencez par ajouter un employé'}
+          </p>
+        </div>
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredEmployees.map((employee) => (
             <div 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Download, Upload, Database, Shield, Clock, AlertTriangle, CheckCircle, XCircle, Play, Pause, RotateCw, Trash2 } from 'lucide-react'
 
 interface Backup {
@@ -34,77 +34,45 @@ export default function SauvegardePage() {
   const [backupProgress, setBackupProgress] = useState(0)
   const [isBackupRunning, setIsBackupRunning] = useState(false)
 
-  // Mock data for demonstration
-  useState(() => {
-    setTimeout(() => {
-      const mockBackups: Backup[] = [
-        {
-          id: '1',
-          name: 'Sauvegarde automatique - 10 Mars 2024',
-          type: 'automatic',
-          size: '245.5 MB',
-          createdAt: '2024-03-10T02:00:00Z',
-          status: 'completed',
-          location: 'cloud',
-          description: 'Sauvegarde quotidienne automatique',
-          fileSize: 245500000,
-          compressedSize: 123000000
-        },
-        {
-          id: '2',
-          name: 'Sauvegarde manuelle - Avant mise à jour',
-          type: 'manual',
-          size: '189.2 MB',
-          createdAt: '2024-03-15T14:30:00Z',
-          status: 'completed',
-          location: 'cloud',
-          description: 'Sauvegarde avant mise à jour du système',
-          fileSize: 189200000,
-          compressedSize: 95000000
-        },
-        {
-          id: '3',
-          name: 'Sauvegarde hebdomadaire - 8 Mars 2024',
-          type: 'automatic',
-          size: '512.8 MB',
-          createdAt: '2024-03-08T00:00:00Z',
-          status: 'completed',
-          location: 'cloud',
-          description: 'Sauvegarde hebdomadaire complète',
-          fileSize: 512800000,
-          compressedSize: 256000000
-        }
-      ]
-
-      const mockRestorePoints: RestorePoint[] = [
-        {
-          id: '1',
-          name: 'Point de restauration - 5 Mars 2024',
-          date: '2024-03-05T12:00:00Z',
-          type: 'manual',
-          description: 'Point de restauration avant mise à jour des produits'
-        },
-        {
-          id: '2',
-          name: 'Point de restauration - 1 Mars 2024',
-          date: '2024-03-01T00:00:00Z',
-          type: 'automatic',
-          description: 'Point de restauration automatique quotidien'
-        },
-        {
-          id: '3',
-          name: 'Point de restauration - 15 Février 2024',
-          date: '2024-02-15T00:00:00Z',
-          type: 'manual',
-          description: 'Point de restauration après migration des données'
-        }
-      ]
-
-      setBackups(mockBackups)
-      setRestorePoints(mockRestorePoints)
-      setLoading(false)
-    }, 1000)
+  useEffect(() => {
+    loadBackups()
   }, [])
+
+  const loadBackups = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const resetFlag = localStorage.getItem('smartmanager-reset')
+
+      const response = await fetch('/api/backups', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-reset-flag': resetFlag || 'false'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setBackups(result.data || [])
+        setRestorePoints(result.data?.map((backup: Backup) => ({
+          id: backup.id,
+          name: backup.name,
+          date: backup.createdAt,
+          type: backup.type,
+          description: backup.description
+        })) || [])
+      } else {
+        console.error('Failed to load backups')
+        setBackups([])
+        setRestorePoints([])
+      }
+    } catch (error) {
+      console.error('Error loading backups:', error)
+      setBackups([])
+      setRestorePoints([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredBackups = backups.filter(backup =>
     backup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -236,8 +204,22 @@ export default function SauvegardePage() {
       </div>
 
       {/* Backups List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredBackups.map((backup) => (
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Chargement des sauvegardes...</p>
+        </div>
+      ) : filteredBackups.length === 0 ? (
+        <div className="text-center py-12">
+          <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">Aucune sauvegarde trouvée</h3>
+          <p className="text-gray-400">
+            {searchTerm ? 'Essayez de modifier votre recherche' : 'Commencez par créer une sauvegarde'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredBackups.map((backup) => (
           <div key={backup.id} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 hover:border-orange-500 hover:bg-white/10 transition-all duration-200">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -288,7 +270,8 @@ export default function SauvegardePage() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Backup Modal */}
       {showBackupModal && (

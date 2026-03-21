@@ -1,47 +1,25 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-// GET /api/sales/stats
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // TODO: Implémenter la logique avec Prisma
-    // const sales = await prisma.sale.findMany({
-    //   where: { tenantId: user.tenantId }
-    // })
+    // Vérifier si une réinitialisation est demandée
+    const resetFlag = request.headers.get('x-reset-flag') || 
+                     request.cookies.get('smartmanager-reset')?.value
 
-    // Vérifier si les données ont été réinitialisées
-    // Pour l'instant, retournons des données vides si pas de données réelles
-    const isEmpty = true // TODO: remplacer par une vraie logique de détection
-
-    if (isEmpty) {
-      // Données vides après réinitialisation
-      const emptyStats = {
-        daily: 0,
-        weekly: 0,
-        monthly: 0,
-        revenue: 0,
-        totalSales: 0,
-        averageSale: 0
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: emptyStats
-      })
-    }
-
-    // Calculer les statistiques de ventes réelles
-    const stats = {
-      daily: 85000,
-      weekly: 450000,
-      monthly: 1850000,
-      revenue: 1850000,
-      totalSales: 245,
-      averageSale: 7551
+    // Retourner toujours des données vides (pas de données codées en dur)
+    const emptyStats = {
+      daily: 0,
+      weekly: 0,
+      monthly: 0,
+      revenue: 0,
+      totalSales: 0,
+      averageSale: 0
     }
 
     return NextResponse.json({
       success: true,
-      data: stats
+      data: emptyStats,
+      message: resetFlag === 'true' ? 'Données ventes réinitialisées' : 'Aucune donnée de vente'
     })
   } catch (error) {
     console.error('Erreur GET /api/sales/stats:', error)

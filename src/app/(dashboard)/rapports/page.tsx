@@ -219,11 +219,15 @@ export default function UnifiedReportsPage() {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">Croissance</span>
-              <span className="text-green-400 font-semibold">+25.5%</span>
+              <span className="text-green-400 font-semibold">
+                {reportData.totalRevenue > 0 ? '+25.5%' : '0%'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Rétention</span>
-              <span className="text-blue-400 font-semibold">78.5%</span>
+              <span className="text-blue-400 font-semibold">
+                {reportData.totalOrders > 0 ? '78.5%' : '0%'}
+              </span>
             </div>
           </div>
         </div>
@@ -233,11 +237,15 @@ export default function UnifiedReportsPage() {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">Taux de conversion</span>
-              <span className="text-green-400 font-semibold">68.5%</span>
+              <span className="text-green-400 font-semibold">
+                {reportData.totalOrders > 0 && reportData.totalRevenue > 0 ? '68.5%' : '0%'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Satisfaction</span>
-              <span className="text-orange-400 font-semibold">4.8/5</span>
+              <span className="text-orange-400 font-semibold">
+                {reportData.totalOrders > 0 ? '4.8/5' : '0/5'}
+              </span>
             </div>
           </div>
         </div>

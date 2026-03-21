@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Wallet, 
   TrendingUp, 
@@ -10,8 +10,93 @@ import {
   DollarSign
 } from 'lucide-react'
 
+interface FinancialMetrics {
+  cashAvailable: number
+  totalRevenue: number
+  totalExpenses: number
+  netProfit: number
+  roi: number
+  runway: number
+  dailyAvgRevenue: number
+  dailyAvgExpenses: number
+  cashBurnRate: number
+}
+
 export default function TresoreriePage() {
   const [activeTab, setActiveTab] = useState('overview')
+  const [metrics, setMetrics] = useState<FinancialMetrics>({
+    cashAvailable: 0,
+    totalRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    roi: 0,
+    runway: 0,
+    dailyAvgRevenue: 0,
+    dailyAvgExpenses: 0,
+    cashBurnRate: 0
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadFinancialMetrics()
+  }, [])
+
+  const loadFinancialMetrics = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const resetFlag = localStorage.getItem('smartmanager-reset')
+
+      const response = await fetch('/api/financial/metrics', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-reset-flag': resetFlag || 'false'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setMetrics(result.data || {
+          cashAvailable: 0,
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          roi: 0,
+          runway: 0,
+          dailyAvgRevenue: 0,
+          dailyAvgExpenses: 0,
+          cashBurnRate: 0
+        })
+      } else {
+        console.error('Failed to load financial metrics')
+        setMetrics({
+          cashAvailable: 0,
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          roi: 0,
+          runway: 0,
+          dailyAvgRevenue: 0,
+          dailyAvgExpenses: 0,
+          cashBurnRate: 0
+        })
+      }
+    } catch (error) {
+      console.error('Error loading financial metrics:', error)
+      setMetrics({
+        cashAvailable: 0,
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        roi: 0,
+        runway: 0,
+        dailyAvgRevenue: 0,
+        dailyAvgExpenses: 0,
+        cashBurnRate: 0
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="p-4">
@@ -43,7 +128,12 @@ export default function TresoreriePage() {
 
       {/* Tab Content */}
       <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-6">
-        {activeTab === 'overview' && (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-4"></div>
+            <p className="text-gray-400">Chargement des métriques financières...</p>
+          </div>
+        ) : activeTab === 'overview' ? (
           <div className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -52,7 +142,9 @@ export default function TresoreriePage() {
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                     <Wallet className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-2xl font-bold text-white">850k</span>
+                  <span className="text-2xl font-bold text-white">
+                    {metrics.cashAvailable > 0 ? `${(metrics.cashAvailable / 1000).toFixed(0)}k` : '0k'}
+                  </span>
                 </div>
                 <p className="text-gray-400 text-sm mt-2">Trésorerie disponible</p>
               </div>
@@ -61,7 +153,9 @@ export default function TresoreriePage() {
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                     <TrendingUp className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-2xl font-bold text-white">2.5M</span>
+                  <span className="text-2xl font-bold text-white">
+                    {metrics.totalRevenue > 0 ? `${(metrics.totalRevenue / 1000000).toFixed(1)}M` : '0M'}
+                  </span>
                 </div>
                 <p className="text-gray-400 text-sm mt-2">Revenus totaux</p>
               </div>
@@ -70,7 +164,9 @@ export default function TresoreriePage() {
                   <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                     <Target className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-2xl font-bold text-white">70%</span>
+                  <span className="text-2xl font-bold text-white">
+                    {metrics.roi > 0 ? `${metrics.roi}%` : '0%'}
+                  </span>
                 </div>
                 <p className="text-gray-400 text-sm mt-2">ROI</p>
               </div>
@@ -79,7 +175,9 @@ export default function TresoreriePage() {
                   <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
                     <Clock className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-2xl font-bold text-white">14j</span>
+                  <span className="text-2xl font-bold text-white">
+                    {metrics.runway > 0 ? `${metrics.runway}j` : '0j'}
+                  </span>
                 </div>
                 <p className="text-gray-400 text-sm mt-2">Runway</p>
               </div>
@@ -92,15 +190,21 @@ export default function TresoreriePage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Revenus totaux</span>
-                    <span className="text-green-400 font-medium">2,500,000 XAF</span>
+                    <span className="text-green-400 font-medium">
+                      {metrics.totalRevenue > 0 ? `${metrics.totalRevenue.toLocaleString('fr-GA')} XAF` : '0 XAF'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Dépenses totales</span>
-                    <span className="text-red-400 font-medium">1,800,000 XAF</span>
+                    <span className="text-red-400 font-medium">
+                      {metrics.totalExpenses > 0 ? `${metrics.totalExpenses.toLocaleString('fr-GA')} XAF` : '0 XAF'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t border-white/10">
                     <span className="text-white font-medium">Bénéfice net</span>
-                    <span className="text-green-400 font-bold">700,000 XAF</span>
+                    <span className="text-green-400 font-bold">
+                      {metrics.netProfit > 0 ? `${metrics.netProfit.toLocaleString('fr-GA')} XAF` : '0 XAF'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -110,15 +214,21 @@ export default function TresoreriePage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Revenu moyen/jour</span>
-                    <span className="text-blue-400 font-medium">83,333 XAF</span>
+                    <span className="text-blue-400 font-medium">
+                      {metrics.dailyAvgRevenue > 0 ? `${metrics.dailyAvgRevenue.toLocaleString('fr-GA')} XAF` : '0 XAF'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Dépense moyenne/jour</span>
-                    <span className="text-orange-400 font-medium">60,000 XAF</span>
+                    <span className="text-orange-400 font-medium">
+                      {metrics.dailyAvgExpenses > 0 ? `${metrics.dailyAvgExpenses.toLocaleString('fr-GA')} XAF` : '0 XAF'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Cash burn rate</span>
-                    <span className="text-red-400 font-medium">60,000 XAF</span>
+                    <span className="text-red-400 font-medium">
+                      {metrics.cashBurnRate > 0 ? `${metrics.cashBurnRate.toLocaleString('fr-GA')} XAF` : '0 XAF'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -150,6 +260,14 @@ export default function TresoreriePage() {
                 <p className="text-gray-400 text-sm">Analyse périodique</p>
               </button>
             </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4 flex justify-center">
+              <PieChart className="h-16 w-16 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-white mb-2">Aperçu non disponible</h3>
+            <p className="text-gray-400">Veuillez sélectionner un autre onglet</p>
           </div>
         )}
 

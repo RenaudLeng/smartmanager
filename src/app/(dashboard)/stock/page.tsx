@@ -72,19 +72,41 @@ export default function StockPage() {
         if (response.ok) {
           const data = await response.json()
           // Transformer les données de l'API pour correspondre à l'interface Product
-          const transformedProducts = data.data?.map((product: any) => ({
+          const transformedProducts = data.products?.map((product: {
+            id: string
+            name: string
+            description?: string
+            barcode?: string
+            purchasePrice: number
+            sellingPrice: number
+            quantity: number
+            minStock?: number
+            categoryId: string
+            supplierId?: string
+            expirationDate?: string
+            createdAt: string
+            updatedAt: string
+            category: {
+              id: string
+              name: string
+            }
+            supplier?: {
+              id: string
+              name: string
+            }
+          }) => ({
             id: product.id,
             name: product.name,
-            price: product.price,
+            price: product.sellingPrice,
             purchasePrice: product.purchasePrice,
             stock: product.quantity || 0,
             minStock: product.minStock || 0,
             category: product.category?.name || 'Non catégorisé',
             lastUpdated: product.updatedAt || new Date().toISOString().split('T')[0],
             status: product.quantity <= 0 ? 'out_of_stock' : 
-                   product.quantity <= product.minStock ? 'low_stock' : 'in_stock',
+                   product.quantity <= (product.minStock || 0) ? 'low_stock' : 'in_stock',
             supplier: product.supplier?.name || 'Non spécifié',
-            image: product.image
+            image: null
           })) || []
           
           setProducts(transformedProducts)

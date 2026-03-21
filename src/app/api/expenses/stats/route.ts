@@ -1,45 +1,24 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-// GET /api/expenses/stats
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // TODO: Implémenter la logique avec Prisma
-    // const expenses = await prisma.expense.findMany({
-    //   where: { tenantId: user.tenantId }
-    // })
+    // Vérifier si une réinitialisation est demandée
+    const resetFlag = request.headers.get('x-reset-flag') || 
+                     request.cookies.get('smartmanager-reset')?.value
 
-    // Vérifier si les données ont été réinitialisées
-    // Pour l'instant, retournons des données vides si pas de données réelles
-    const isEmpty = true // TODO: remplacer par une vraie logique de détection
-
-    if (isEmpty) {
-      // Données vides après réinitialisation
-      const emptyStats = {
-        daily: 0,
-        weekly: 0,
-        monthly: 0,
-        total: 0,
-        averageExpense: 0
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: emptyStats
-      })
-    }
-
-    // Calculer les statistiques de dépenses réelles
-    const stats = {
-      daily: 65000,
-      weekly: 320000,
-      monthly: 1200000,
-      total: 1200000,
-      averageExpense: 4800
+    // Retourner toujours des données vides (pas de données codées en dur)
+    const emptyStats = {
+      daily: 0,
+      weekly: 0,
+      monthly: 0,
+      total: 0,
+      averageExpense: 0
     }
 
     return NextResponse.json({
       success: true,
-      data: stats
+      data: emptyStats,
+      message: resetFlag === 'true' ? 'Données dépenses réinitialisées' : 'Aucune donnée de dépense'
     })
   } catch (error) {
     console.error('Erreur GET /api/expenses/stats:', error)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, DollarSign, TrendingDown, Calendar, Edit, Trash2, Grid, List } from 'lucide-react'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -18,72 +18,11 @@ interface Expense {
 }
 
 export default function DepensesPage() {
-  // Optimisé : données mock chargées directement sans délai artificiel
-  const [expenses] = useState<Expense[]>([
-    {
-      id: '1',
-      description: 'Achat de matériel informatique',
-      amount: 250000,
-      category: 'fourniture',
-      date: '2024-03-15',
-      paymentMethod: 'Carte bancaire',
-      receipt: 'receipt-001.pdf',
-      notes: 'Nouveaux ordinateurs pour le bureau',
-      createdAt: '2024-03-15T10:30:00Z',
-      updatedAt: '2024-03-15T10:30:00Z'
-    },
-    {
-      id: '2',
-      description: 'Loyer mensuel',
-      amount: 500000,
-      category: 'loyer',
-      date: '2024-03-01',
-      paymentMethod: 'Virement bancaire',
-      receipt: 'receipt-002.pdf',
-      notes: 'Loyer bureau principal',
-      createdAt: '2024-03-01T09:00:00Z',
-      updatedAt: '2024-03-01T09:00:00Z'
-    },
-    {
-      id: '3',
-      description: 'Électricité',
-      amount: 85000,
-      category: 'energie',
-      date: '2024-03-10',
-      paymentMethod: 'Espèces',
-      receipt: 'receipt-003.pdf',
-      notes: 'Facture SEEG Mars 2024',
-      createdAt: '2024-03-10T14:20:00Z',
-      updatedAt: '2024-03-10T14:20:00Z'
-    },
-    {
-      id: '4',
-      description: 'Salaires employés',
-      amount: 1200000,
-      category: 'personnel',
-      date: '2024-03-25',
-      paymentMethod: 'Virement bancaire',
-      receipt: 'receipt-004.pdf',
-      notes: 'Paie Mars 2024',
-      createdAt: '2024-03-25T16:00:00Z',
-      updatedAt: '2024-03-25T16:00:00Z'
-    },
-    {
-      id: '5',
-      description: 'Carburant véhicule',
-      amount: 120000,
-      category: 'transport',
-      date: '2024-03-18',
-      paymentMethod: 'Espèces',
-      receipt: 'receipt-005.pdf',
-      notes: 'Carburant véhicule de livraison',
-      createdAt: '2024-03-18T11:45:00Z',
-      updatedAt: '2024-03-18T11:45:00Z'
-    }
-  ])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [loading, setLoading] = useState(true)
+  const [monthlyBudget, setMonthlyBudget] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  // Pas de loading - données disponibles immédiatement
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [showDetails, setShowDetails] = useState(false)
@@ -104,6 +43,54 @@ export default function DepensesPage() {
     { value: 'maintenance', label: 'Maintenance et réparations' },
     { value: 'autre', label: 'Autres dépenses' }
   ]
+
+  useEffect(() => {
+    loadExpenses()
+  }, [])
+
+  const loadExpenses = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const resetFlag = localStorage.getItem('smartmanager-reset')
+
+      // Charger les dépenses
+      const expensesResponse = await fetch('/api/expenses', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-reset-flag': resetFlag || 'false'
+        }
+      })
+
+      // Charger les stats pour le budget mensuel
+      const statsResponse = await fetch('/api/expenses/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-reset-flag': resetFlag || 'false'
+        }
+      })
+
+      if (expensesResponse.ok) {
+        const expensesResult = await expensesResponse.json()
+        setExpenses(expensesResult.data || [])
+      } else {
+        console.error('Failed to load expenses')
+        setExpenses([])
+      }
+
+      if (statsResponse.ok) {
+        // Le budget mensuel est une valeur fixe pour l'instant, mais pourrait venir de l'API
+        setMonthlyBudget(500000) // 500k XAF
+      } else {
+        setMonthlyBudget(0)
+      }
+    } catch (error) {
+      console.error('Error loading expenses:', error)
+      setExpenses([])
+      setMonthlyBudget(0)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredExpenses = expenses.filter(expense =>
     expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -235,7 +222,9 @@ export default function DepensesPage() {
               <Calendar className="h-8 w-8 text-green-400" />
               <div>
                 <p className="text-gray-400 text-sm">Budget mensuel</p>
-                <p className="text-2xl font-bold text-green-400">500k XAF</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {monthlyBudget > 0 ? `${(monthlyBudget / 1000).toFixed(0)}k XAF` : '0k XAF'}
+                </p>
               </div>
             </div>
           </div>
@@ -300,7 +289,20 @@ export default function DepensesPage() {
       </div>
 
       {/* Expenses Display - Grid or List View */}
-      {viewMode === 'grid' ? (
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Chargement des dépenses...</p>
+        </div>
+      ) : filteredExpenses.length === 0 ? (
+        <div className="text-center py-12">
+          <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">Aucune dépense trouvée</h3>
+          <p className="text-gray-400">
+            {searchTerm || selectedCategory !== 'all' ? 'Essayez de modifier votre recherche' : 'Commencez par ajouter une dépense'}
+          </p>
+        </div>
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredExpenses.map((expense) => (
             <div key={expense.id} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 hover:border-orange-500 hover:bg-white/10 transition-all duration-200">
