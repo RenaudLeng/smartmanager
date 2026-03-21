@@ -63,6 +63,14 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
   
+  // États pour les configurations du tableau de bord
+  const [dashboardConfig, setDashboardConfig] = useState({
+    dailyObjective: 100000,
+    dailyExpenseLimit: 50000,
+    minProfitMargin: 15,
+    lowStockThreshold: 10
+  })
+  
   const showNotification = (type: 'success' | 'error' | 'info', message: string, duration = 3000) => {
     const id = Date.now().toString()
     setNotifications(prev => [...prev, { id, type, message, duration }])
@@ -133,6 +141,7 @@ export default function SettingsPage() {
   })
 
   const tabs = [
+    { id: 'dashboard', label: 'Tableau de Bord', icon: Bell },
     { id: 'user', label: 'Utilisateur', icon: User },
     { id: 'business', label: 'Commerce', icon: Store },
     { id: 'users', label: 'Utilisateurs', icon: Users },
@@ -316,6 +325,138 @@ export default function SettingsPage() {
 
         {/* Tab Content */}
         <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-6">
+          {/* Dashboard Settings Tab */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Paramètres du Tableau de Bord</h3>
+                <p className="text-gray-400 text-sm mb-6">Configurez les objectifs et limites pour votre entreprise</p>
+                
+                {/* Objectifs de Ventes */}
+                <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4">
+                  <h4 className="text-white font-medium mb-4 flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    Objectifs de Ventes
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-2">Objectif Quotidien (XAF)</label>
+                      <input
+                        type="number"
+                        value={dashboardConfig.dailyObjective}
+                        onChange={(e) => setDashboardConfig(prev => ({ ...prev, dailyObjective: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="100000"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Actuel: {dashboardConfig.dailyObjective.toLocaleString()} XAF</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contrôle des Dépenses */}
+                <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4">
+                  <h4 className="text-white font-medium mb-4 flex items-center">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                    Contrôle des Dépenses
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-2">Limite Quotidienne (XAF)</label>
+                      <input
+                        type="number"
+                        value={dashboardConfig.dailyExpenseLimit}
+                        onChange={(e) => setDashboardConfig(prev => ({ ...prev, dailyExpenseLimit: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="50000"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Actuel: {dashboardConfig.dailyExpenseLimit.toLocaleString()} XAF</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rentabilité */}
+                <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4">
+                  <h4 className="text-white font-medium mb-4 flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Rentabilité
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-2">Marge Bénéficiaire Minimale (%)</label>
+                      <input
+                        type="number"
+                        value={dashboardConfig.minProfitMargin}
+                        onChange={(e) => setDashboardConfig(prev => ({ ...prev, minProfitMargin: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="15"
+                        min="0"
+                        max="100"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Actuel: {dashboardConfig.minProfitMargin}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gestion des Stocks */}
+                <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4">
+                  <h4 className="text-white font-medium mb-4 flex items-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                    Gestion des Stocks
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-2">Seuil d&apos;Alerte de Stock Bas</label>
+                      <input
+                        type="number"
+                        value={dashboardConfig.lowStockThreshold}
+                        onChange={(e) => setDashboardConfig(prev => ({ ...prev, lowStockThreshold: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="10"
+                        min="1"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Alertez quand le stock est inferieur a {dashboardConfig.lowStockThreshold} unites</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                  <button
+                    onClick={() => setDashboardConfig({
+                      dailyObjective: 100000,
+                      dailyExpenseLimit: 50000,
+                      minProfitMargin: 15,
+                      lowStockThreshold: 10
+                    })}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+                  >
+                    Réinitialiser aux Défauts
+                  </button>
+                  <button
+                    onClick={() => {
+                      showNotification('success', 'Paramètres du tableau de bord sauvegardés avec succès!')
+                    }}
+                    className="px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all duration-200 flex items-center space-x-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Sauvegarder</span>
+                  </button>
+                </div>
+
+                {/* Impact des paramètres */}
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mt-4">
+                  <h4 className="text-blue-400 font-medium mb-2">Impact de ces paramètres</h4>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• <span className="text-orange-400">Objectif Quotidien:</span> Definit l&apos;objectif de ventes pour le calcul de progression dans le tableau de bord.</li>
+                    <li>• <span className="text-orange-400">Limite Quotidienne:</span> Alertes lorsque les depenses depassent ce montant.</li>
+                    <li>• <span className="text-orange-400">Marge Minimale:</span> Indicateur de performance lorsque la marge est inferieure a ce seuil.</li>
+                    <li>• <span className="text-orange-400">Seuil de Stock:</span> Alertes lorsque les produits ont moins de ce nombre d&apos;unites.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* User Settings Tab */}
           {activeTab === 'user' && (
             <div className="space-y-6">
