@@ -250,8 +250,8 @@ export function BudgetLineManager() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-9999">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
             <h3 className="text-xl font-bold text-white mb-6">
               {editingLine ? 'Modifier la ligne budgétaire' : 'Ajouter une ligne budgétaire'}
             </h3>

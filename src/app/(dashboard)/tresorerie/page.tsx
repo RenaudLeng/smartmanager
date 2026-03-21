@@ -328,8 +328,8 @@ export default function TresoreriePage() {
 
       {/* Modal Transaction */}
       {showTransactionModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md relative">
             <h3 className="text-xl font-bold text-white mb-6">Ajouter une transaction</h3>
             <p className="text-gray-400 mb-4">Module de transaction en cours de développement</p>
             <button
@@ -344,8 +344,8 @@ export default function TresoreriePage() {
 
       {/* Modal Budget */}
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md relative">
             <h3 className="text-xl font-bold text-white mb-6">Créer une ligne budgétaire</h3>
             <p className="text-gray-400 mb-4">Module de budget en cours de développement</p>
             <button
@@ -360,8 +360,8 @@ export default function TresoreriePage() {
 
       {/* Modal Report */}
       {showReportModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md relative">
             <h3 className="text-xl font-bold text-white mb-6">Générer un rapport</h3>
             <p className="text-gray-400 mb-4">Module de rapport en cours de développement</p>
             <button
