@@ -476,8 +476,8 @@ export function ReportsManager() {
       )}
 
       {/* Composants partagés */}
-      <ConfirmDialogComponent />
-      <NotificationComponent />
+      {ConfirmDialogComponent}
+      {NotificationComponent}
     </div>
   )
 }

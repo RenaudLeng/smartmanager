@@ -281,7 +281,7 @@ export default function UnifiedReportsPage() {
       )}
 
       {/* Notifications */}
-      <NotificationComponent />
+      {NotificationComponent}
     </div>
   )
 }

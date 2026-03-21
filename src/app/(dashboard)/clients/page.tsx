@@ -538,10 +538,8 @@ export default function ClientsPage() {
       </div>
 
       {/* Composants partagés */}
-      <>
-        <ConfirmDialogComponent />
-        <NotificationComponent />
-      </>
+      {ConfirmDialogComponent}
+      {NotificationComponent}
     </>
   )
 }

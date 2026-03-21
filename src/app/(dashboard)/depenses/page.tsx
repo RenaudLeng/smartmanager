@@ -598,10 +598,8 @@ export default function DepensesPage() {
       )}
 
       {/* Composants partagés */}
-      <>
-        <ConfirmDialogComponent />
-        <NotificationComponent />
-      </>
+      {ConfirmDialogComponent}
+      {NotificationComponent}
     </div>
   )
 }
