@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   BarChart3, TrendingUp, DollarSign, ShoppingCart, 
@@ -19,18 +19,107 @@ interface ReportData {
 
 export default function UnifiedReportsPage() {
   const router = useRouter()
-  // RADICAL : données mock chargées directement sans délai artificiel
-  const [reportData] = useState<ReportData>({
-    totalRevenue: 2500000,
-    totalExpenses: 1800000,
-    netProfit: 700000,
-    profitMargin: 28,
-    totalOrders: 156,
-    averageOrderValue: 16025
+  const [reportData, setReportData] = useState<ReportData>({
+    totalRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    profitMargin: 0,
+    totalOrders: 0,
+    averageOrderValue: 0
   })
+  const [loading, setLoading] = useState(true)
   const [showExportModal, setShowExportModal] = useState(false)
   
   const { showNotification, NotificationComponent } = useNotifications()
+
+  // Charger les données depuis les APIs
+  useEffect(() => {
+    async function loadReportData() {
+      try {
+        const token = localStorage.getItem('token')
+        
+        if (!token) {
+          console.log('Utilisateur non connecté - utilisation des données par défaut')
+          setReportData({
+            totalRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            profitMargin: 0,
+            totalOrders: 0,
+            averageOrderValue: 0
+          })
+          setLoading(false)
+          return
+        }
+        
+        // Charger les métriques financières
+        const metricsResponse = await fetch('/api/financial/metrics', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        // Charger les statistiques de ventes
+        const salesResponse = await fetch('/api/sales/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        // Charger les statistiques de dépenses
+        const expensesResponse = await fetch('/api/expenses/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        let metrics = { totalRevenue: 0, totalExpenses: 0, netProfit: 0, profitMargin: 0 }
+        let sales = { totalSales: 0, revenue: 0 }
+        let expenses = { total: 0 }
+        
+        if (metricsResponse.ok) {
+          const data = await metricsResponse.json()
+          metrics = data.data || metrics
+        }
+        
+        if (salesResponse.ok) {
+          const data = await salesResponse.json()
+          sales = data.data || sales
+        }
+        
+        if (expensesResponse.ok) {
+          const data = await expensesResponse.json()
+          expenses = data.data || expenses
+        }
+        
+        // Calculer les données du rapport
+        const totalRevenue = metrics.totalRevenue || sales.revenue || 0
+        const totalExpenses = metrics.totalExpenses || expenses.total || 0
+        const netProfit = metrics.netProfit || (totalRevenue - totalExpenses)
+        const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue * 100) : 0
+        const totalOrders = sales.totalSales || 0
+        const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0
+        
+        setReportData({
+          totalRevenue,
+          totalExpenses,
+          netProfit,
+          profitMargin,
+          totalOrders,
+          averageOrderValue
+        })
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des données de rapport:', error)
+        setReportData({
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          profitMargin: 0,
+          totalOrders: 0,
+          averageOrderValue: 0
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadReportData()
+  }, [])
 
   const handleExport = useCallback(async (format: 'pdf' | 'excel') => {
     try {
