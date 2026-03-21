@@ -433,8 +433,25 @@ export default function SettingsPage() {
                     Réinitialiser aux Défauts
                   </button>
                   <button
-                    onClick={() => {
-                      showNotification('success', 'Paramètres du tableau de bord sauvegardés avec succès!')
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/dashboard/config', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify(dashboardConfig)
+                        })
+
+                        if (response.ok) {
+                          showNotification('success', 'Paramètres du tableau de bord sauvegardés avec succès!')
+                        } else {
+                          showNotification('error', 'Erreur lors de la sauvegarde')
+                        }
+                      } catch (error) {
+                        console.error('Erreur sauvegarde:', error)
+                        showNotification('error', 'Erreur lors de la sauvegarde')
+                      }
                     }}
                     className="px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all duration-200 flex items-center space-x-2"
                   >
@@ -950,17 +967,6 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-
-          {/* Save Button */}
-          <div className="flex justify-end mt-8">
-            <button
-              onClick={handleSave}
-              className="bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 shadow-lg shadow-orange-500/25"
-            >
-              <Save className="h-4 w-4" />
-              <span>Sauvegarder</span>
-            </button>
-          </div>
         </div>
 
         {/* User Modal */}
