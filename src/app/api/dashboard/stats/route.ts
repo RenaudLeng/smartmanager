@@ -2,6 +2,29 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
+    // Vérifier si les données ont été réinitialisées
+    // Pour l'instant, retournons des données vides si pas de données réelles
+    const isEmpty = true // TODO: remplacer par une vraie logique de détection
+
+    if (isEmpty) {
+      // Données vides après réinitialisation
+      const emptyStats = {
+        todaySales: 0,
+        todayProfit: 0,
+        todayExpenses: 0,
+        lowStockProducts: 0,
+        customerDebts: 0,
+        cashBalance: 0,
+        totalProducts: 0,
+        totalSales: 0,
+        totalCustomers: 0,
+        recentTransactions: [],
+        topProducts: []
+      }
+
+      return NextResponse.json(emptyStats)
+    }
+
     // Mode démo - statistiques simulées
     const stats = {
       todaySales: 150000,
