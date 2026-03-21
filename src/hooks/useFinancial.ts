@@ -205,11 +205,30 @@ export function useFinancial(): UseFinancialReturn {
 
   const addTransaction = useCallback(async (transaction: Omit<FinancialTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('Token non trouvé')
+      }
+
       const newTransaction: FinancialTransaction = {
         ...transaction,
         id: Date.now().toString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
+      }
+
+      // Appeler l'API pour persister la transaction
+      const response = await fetch('/api/financial/transactions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newTransaction)
+      })
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'ajout de la transaction')
       }
 
       setState(prev => ({
@@ -265,6 +284,11 @@ export function useFinancial(): UseFinancialReturn {
 
   const generateReport = useCallback(async (type: FinancialReport['type'], period: { start: string; end: string }) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('Token non trouvé')
+      }
+
       const periodTransactions = state.transactions.filter(t => 
         t.date >= period.start && t.date <= period.end
       )
@@ -286,14 +310,29 @@ export function useFinancial(): UseFinancialReturn {
         createdAt: new Date().toISOString()
       }
 
+      // Appeler l'API pour persister le rapport
+      const response = await fetch('/api/financial/reports', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(report)
+      })
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du rapport')
+      }
+
       setState(prev => ({
         ...prev,
         reports: [...prev.reports, report]
       }))
     } catch (error) {
+      console.error('Erreur lors de la génération du rapport:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la génération du rapport' }))
     }
-  }, [state.budgetLines, state.transactions, calculateMetrics])
+  }, [state.transactions, state.budgetLines, calculateMetrics])
 
   const getBudgetLineById = useCallback((id: string): BudgetLine | undefined => {
     return state.budgetLines.find(line => line.id === id)

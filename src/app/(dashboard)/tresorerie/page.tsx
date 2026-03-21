@@ -37,6 +37,11 @@ export default function TresoreriePage() {
   })
   const [loading, setLoading] = useState(true)
 
+  // États pour les modaux
+  const [showTransactionModal, setShowTransactionModal] = useState(false)
+  const [showBudgetModal, setShowBudgetModal] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+
   useEffect(() => {
     loadFinancialMetrics()
   }, [])
@@ -236,7 +241,10 @@ export default function TresoreriePage() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg p-4 text-left transition-colors">
+              <button 
+                onClick={() => setShowTransactionModal(true)}
+                className="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg p-4 text-left transition-colors"
+              >
                 <div className="text-orange-400 text-2xl mb-2">
                   <DollarSign className="h-6 w-6" />
                 </div>
@@ -244,7 +252,10 @@ export default function TresoreriePage() {
                 <p className="text-gray-400 text-sm">Enregistrer revenu ou dépense</p>
               </button>
 
-              <button className="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg p-4 text-left transition-colors">
+              <button 
+                onClick={() => setShowBudgetModal(true)}
+                className="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg p-4 text-left transition-colors"
+              >
                 <div className="text-orange-400 text-2xl mb-2">
                   <PieChart className="h-6 w-6" />
                 </div>
@@ -252,7 +263,10 @@ export default function TresoreriePage() {
                 <p className="text-gray-400 text-sm">Ajouter fonds ou prêt</p>
               </button>
 
-              <button className="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg p-4 text-left transition-colors">
+              <button 
+                onClick={() => setShowReportModal(true)}
+                className="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg p-4 text-left transition-colors"
+              >
                 <div className="text-orange-400 text-2xl mb-2">
                   <TrendingUp className="h-6 w-6" />
                 </div>
@@ -311,6 +325,54 @@ export default function TresoreriePage() {
           </div>
         )}
       </div>
+
+      {/* Modal Transaction */}
+      {showTransactionModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-6">Ajouter une transaction</h3>
+            <p className="text-gray-400 mb-4">Module de transaction en cours de développement</p>
+            <button
+              onClick={() => setShowTransactionModal(false)}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Budget */}
+      {showBudgetModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-6">Créer une ligne budgétaire</h3>
+            <p className="text-gray-400 mb-4">Module de budget en cours de développement</p>
+            <button
+              onClick={() => setShowBudgetModal(false)}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Report */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-6">Générer un rapport</h3>
+            <p className="text-gray-400 mb-4">Module de rapport en cours de développement</p>
+            <button
+              onClick={() => setShowReportModal(false)}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
