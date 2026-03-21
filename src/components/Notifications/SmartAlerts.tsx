@@ -77,7 +77,7 @@ export function SmartAlerts() {
         })
         
         // Charger la configuration du tableau de bord
-        const configResponse = await fetch('/api/dashboard/config?tenantId=default', {
+        const configResponse = await fetch('/api/dashboard/config', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         
