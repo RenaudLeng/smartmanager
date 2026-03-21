@@ -111,7 +111,7 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
     },
     {
       name: 'Paramètres',
-      href: '/settings',
+      href: '/parametres',
       icon: Settings,
       roles: ['super_admin', 'admin']
     },

@@ -32,6 +32,7 @@ model Tenant {
   debts             Debt[]
   inventoryLogs     InventoryLog[]
   subscriptions     Subscription[]
+  dashboardConfigs   DashboardConfig[]
 
   @@map("tenants")
 }
@@ -294,4 +295,20 @@ model Notification {
   createdAt         DateTime @default(now())
 
   @@map("notifications")
+}
+
+model DashboardConfig {
+  id                String   @id @default(cuid())
+  dailyObjective    Int      @default(100000)
+  dailyExpenseLimit Int      @default(50000)
+  minProfitMargin   Float    @default(15)
+  lowStockThreshold Int      @default(10)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  tenantId          String
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId])
+  @@map("dashboard_configs")
 }

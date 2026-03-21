@@ -31,10 +31,17 @@ interface ExpenseData {
 
 export function SmartAlerts() {
   const { checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts } = useNotifications()
-  const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([])
-  const [salesData, setSalesData] = useState<SalesData>({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
-  const [expenseData, setExpenseData] = useState<ExpenseData>({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+  const [stockData, setStockData] = useState({ lowStock: 0, totalProducts: 0 })
+  const [salesData, setSalesData] = useState({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+  const [expenseData, setExpenseData] = useState({ daily: 0, weekly: 0, monthly: 0, total: 0 })
   const [profitMargin, setProfitMargin] = useState(0)
+  const [config, setConfig] = useState({
+    dailyObjective: 100000,
+    dailyExpenseLimit: 50000,
+    minProfitMargin: 15,
+    lowStockThreshold: 10
+  })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Charger les données réelles depuis l'API
@@ -68,6 +75,11 @@ export function SmartAlerts() {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         
+        // Charger la configuration du tableau de bord
+        const configResponse = await fetch('/api/dashboard/config?tenantId=default', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
         // Gérer les réponses même si elles échouent
         let productsData = { data: [] }
         let salesData = { data: { daily: 0, weekly: 0, monthly: 0, revenue: 0 } }
@@ -89,6 +101,14 @@ export function SmartAlerts() {
           expensesData = await expensesResponse.json()
         } else {
           console.warn('Erreur chargement dépenses:', expensesResponse.status)
+        }
+        
+        let configData = { data: { dailyObjective: 100000, dailyExpenseLimit: 50000, minProfitMargin: 15, lowStockThreshold: 10 } }
+        if (configResponse.ok) {
+          configData = await configResponse.json()
+          setConfig(configData.data)
+        } else {
+          console.warn('Erreur chargement configuration:', configResponse.status)
         }
         
         // Calculer la marge bénéficiaire
@@ -132,12 +152,9 @@ export function SmartAlerts() {
     return () => clearInterval(interval)
   }, [checkStockAlerts, checkSalesAlerts, checkExpenseAlerts, checkProfitAlerts])
 
-  const dailyObjective = 100000
-  const dailyExpenseLimit = 50000
-  const minProfitMargin = 15
-  const salesProgress = dailyObjective > 0 ? (salesData.daily / dailyObjective * 100) : 0
-  const expenseStatus = expenseData.daily > dailyExpenseLimit ? 'DÉPASSÉ' : 'NORMAL'
-  const profitStatus = profitMargin >= minProfitMargin ? 'NORMAL' : 'SOUS MINIMUM'
+  const salesProgress = config.dailyObjective > 0 ? (salesData.daily / config.dailyObjective * 100) : 0
+  const expenseStatus = expenseData.daily > config.dailyExpenseLimit ? 'DÉPASSÉ' : 'NORMAL'
+  const profitStatus = profitMargin >= config.minProfitMargin ? 'NORMAL' : 'SOUS MINIMUM'
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -175,7 +192,7 @@ export function SmartAlerts() {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Objectif quotidien</span>
-            <span className="text-gray-400 text-sm">{dailyObjective.toLocaleString()} XAF</span>
+            <span className="text-gray-400 text-sm">{config.dailyObjective.toLocaleString()} XAF</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Actuel</span>
@@ -200,7 +217,7 @@ export function SmartAlerts() {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Limite quotidienne</span>
-            <span className="text-gray-400 text-sm">{dailyExpenseLimit.toLocaleString()} XAF</span>
+            <span className="text-gray-400 text-sm">{config.dailyExpenseLimit.toLocaleString()} XAF</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Actuel</span>
@@ -225,7 +242,7 @@ export function SmartAlerts() {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Marge minimale</span>
-            <span className="text-gray-400 text-sm">{minProfitMargin}%</span>
+            <span className="text-gray-400 text-sm">{config.minProfitMargin}%</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-300 text-sm">Actuelle</span>
