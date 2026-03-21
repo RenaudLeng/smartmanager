@@ -99,29 +99,24 @@ export default function ClientsPage() {
   const handleDeleteCustomer = useCallback(async (customer: Customer) => {
     const confirmed = await confirm({
       title: 'Confirmer la suppression',
-      message: 'Êtes-vous sûr de vouloir supprimer ce client ?',
+      message: `Êtes-vous sûr de vouloir supprimer le client "${customer.name}" ?`,
       type: 'danger',
       confirmText: 'Supprimer',
-      cancelText: 'Annuler',
-      itemDetails: {
-        title: customer.name,
-        subtitle: `${customer.email} • ${customer.phone}`,
-        amount: `${customer.totalPurchases.toLocaleString('fr-GA')} XAF d'achats`
-      }
+      cancelText: 'Annuler'
     })
 
     if (confirmed) {
       try {
         // Simuler la suppression du client
         showNotification(
-          'success', 
-          `Client "${customer.name}" supprimé avec succès!`
+          `Client "${customer.name}" supprimé avec succès!`,
+          'success'
         )
         console.log('Client supprimé:', customer.id)
       } catch (error) {
         showNotification(
-          'error', 
-          'Erreur lors de la suppression du client. Veuillez réessayer.'
+          'Erreur lors de la suppression du client. Veuillez réessayer.',
+          'error'
         )
         console.error('Erreur suppression client:', error)
       }

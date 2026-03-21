@@ -3,7 +3,7 @@ import { useState } from 'react'
 interface ConfirmDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm?: () => void
   title: string
   message: string
   confirmText?: string
@@ -14,7 +14,7 @@ interface ConfirmDialogProps {
 export function useConfirmDialog() {
   const [dialog, setDialog] = useState<ConfirmDialogProps | null>(null)
 
-  const confirm = (props: Omit<ConfirmDialogProps, 'isOpen' | 'onClose'>) => {
+  const confirm = (props: Omit<ConfirmDialogProps, 'isOpen' | 'onClose' | 'onConfirm'>) => {
     return new Promise<boolean>((resolve) => {
       setDialog({
         ...props,

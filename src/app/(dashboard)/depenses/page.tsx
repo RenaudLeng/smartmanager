@@ -155,29 +155,24 @@ export default function DepensesPage() {
   const handleDeleteExpense = useCallback(async (expense: Expense) => {
     const confirmed = await confirm({
       title: 'Confirmer la suppression',
-      message: 'Êtes-vous sûr de vouloir supprimer cette dépense ?',
+      message: `Êtes-vous sûr de vouloir supprimer la dépense "${expense.description}" ?`,
       type: 'danger',
       confirmText: 'Supprimer',
-      cancelText: 'Annuler',
-      itemDetails: {
-        title: expense.description,
-        subtitle: `${expense.category} • ${expense.date}`,
-        amount: `${expense.amount.toLocaleString('fr-GA')} XAF`
-      }
+      cancelText: 'Annuler'
     })
 
     if (confirmed) {
       try {
         // Simuler la suppression de la dépense
         showNotification(
-          'success', 
-          `Dépense "${expense.description}" supprimée avec succès!`
+          `Dépense "${expense.description}" supprimée avec succès!`,
+          'success'
         )
         console.log('Dépense supprimée:', expense.id)
       } catch (error) {
         showNotification(
-          'error', 
-          'Erreur lors de la suppression de la dépense. Veuillez réessayer.'
+          'Erreur lors de la suppression de la dépense. Veuillez réessayer.',
+          'error'
         )
         console.error('Erreur suppression dépense:', error)
       }

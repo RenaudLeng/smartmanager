@@ -50,15 +50,10 @@ export function ReportsManager() {
   const handleDeleteReport = useCallback(async (report: FinancialReport) => {
     const confirmed = await confirm({
       title: 'Confirmer la suppression',
-      message: 'Êtes-vous sûr de vouloir supprimer ce rapport ?',
+      message: `Êtes-vous sûr de vouloir supprimer le rapport "${report.title}" ?`,
       type: 'danger',
       confirmText: 'Supprimer',
-      cancelText: 'Annuler',
-      itemDetails: {
-        title: report.title,
-        subtitle: `${formatDate(report.period.start)} - ${formatDate(report.period.end)}`,
-        amount: formatCurrency(report.metrics.totalRevenue)
-      }
+      cancelText: 'Annuler'
     })
 
     if (confirmed) {
@@ -67,17 +62,11 @@ export function ReportsManager() {
         // await actions.deleteReport(report.id)
         
         // Afficher la notification de succès
-        showNotification(
-          'success', 
-          `Rapport "${report.title}" supprimé avec succès!`
-        )
+        showNotification(`Rapport "${report.title}" supprimé avec succès!`, 'success')
 
         console.log('Rapport supprimé:', report.id)
       } catch (error) {
-        showNotification(
-          'error', 
-          'Erreur lors de la suppression du rapport. Veuillez réessayer.'
-        )
+        showNotification('Erreur lors de la suppression du rapport. Veuillez réessayer.', 'error')
         console.error('Erreur suppression rapport:', error)
       }
     }

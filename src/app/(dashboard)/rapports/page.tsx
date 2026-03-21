@@ -123,10 +123,10 @@ export default function UnifiedReportsPage() {
 
   const handleExport = useCallback(async (format: 'pdf' | 'excel') => {
     try {
-      showNotification('success', `Rapport exporté en ${format.toUpperCase()} avec succès!`)
+      showNotification(`Rapport exporté en ${format.toUpperCase()} avec succès!`, 'success')
       setShowExportModal(false)
     } catch {
-      showNotification('error', 'Erreur lors de l\'export du rapport')
+      showNotification('Erreur lors de l\'export du rapport', 'error')
     }
   }, [showNotification])
 
