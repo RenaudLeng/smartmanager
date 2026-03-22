@@ -200,7 +200,7 @@ export default function POSPage() {
     return paid - total
   }, [getTotalAmount, customerAmount])
 
-  const confirmPayment = useCallback(async () => {
+  const confirmPayment = async () => {
     const totalAmount = getTotalAmount()
     const paidAmount = parseFloat(customerAmount) || totalAmount
     
@@ -299,7 +299,7 @@ export default function POSPage() {
       console.error('Erreur lors de l\'enregistrement de la vente:', error)
       showNotification('error', 'Erreur lors de l\'enregistrement de la vente: ' + (error as Error).message)
     }
-  }, [cart, getTotalAmount, customerAmount, selectedPaymentMethod, showNotification, tenantData])
+  }
 
   return (
     <div className="min-h-screen bg-black">
