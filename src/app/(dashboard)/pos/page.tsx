@@ -43,13 +43,20 @@ export default function POSPage() {
   
   // Initialize products data from API
   const [products, setProducts] = useState<Product[]>([])
-        if (!token) {
-          console.log('Utilisateur non connecté - utilisation des données par défaut')
-          setProducts([])
-          setProductsLoading(false)
-          return
-        }
+  const [productsLoading, setProductsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        console.log('Utilisateur non connecté - utilisation des données par défaut')
+        setProducts([])
+        setProductsLoading(false)
+        return
+      }
         
+      try {
         const response = await fetch('/api/products', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -63,7 +70,7 @@ export default function POSPage() {
         } else {
           // Si erreur 401, c'est normal (non authentifié)
           if (response.status === 401) {
-            console.log('Session expirée ou non authentifiée - utilisation des données par défaut')
+            console.log('Session expirée ou non authentifiée')
           } else {
             console.warn(`Erreur ${response.status} lors du chargement des produits`)
           }
