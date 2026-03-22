@@ -122,70 +122,55 @@ export default function TenantManager() {
     features: businessTypeFeatures.retail
   })
 
-  // Mock data pour développement
+  // Charger les vrais tenants depuis l'API
   useEffect(() => {
-    const mockTenants: Tenant[] = [
-      {
-        id: '1',
-        name: 'Restaurant Le Gourmet',
-        email: 'contact@legourmet.com',
-        phone: '+241 01 23 45 67',
-        address: 'Boulevard de la Mer, Libreville',
-        businessType: 'restaurant',
-        currency: 'XAF',
-        status: 'active',
-        createdAt: '2024-01-15',
-        lastLogin: '2024-03-14 10:30',
-        users: 5,
-        features: businessTypeFeatures.restaurant
-      },
-      {
-        id: '2',
-        name: 'Pharmacie Santé Plus',
-        email: 'info@santeplus.ga',
-        phone: '+241 02 34 56 78',
-        address: 'Centre Ville, Libreville',
-        businessType: 'pharmacy',
-        currency: 'XAF',
-        status: 'active',
-        createdAt: '2024-02-01',
-        lastLogin: '2024-03-14 09:15',
-        users: 3,
-        features: businessTypeFeatures.pharmacy
-      },
-      {
-        id: '3',
-        name: 'Bar Le Lounge',
-        email: 'contact@lounge-bar.ga',
-        phone: '+241 03 45 67 89',
-        address: 'Quartier Montagne, Libreville',
-        businessType: 'bar',
-        currency: 'XAF',
-        status: 'active',
-        createdAt: '2024-01-20',
-        lastLogin: '2024-03-13 22:45',
-        users: 2,
-        features: businessTypeFeatures.bar
-      },
-      {
-        id: '4',
-        name: 'Supermarché EcoPlus',
-        email: 'contact@ecoplus.ga',
-        phone: '+241 04 56 78 90',
-        address: 'Owendo, Libreville',
-        businessType: 'supermarket',
-        currency: 'XAF',
-        status: 'suspended',
-        createdAt: '2024-01-10',
-        users: 8,
-        features: businessTypeFeatures.supermarket
-      }
-    ]
+    const loadTenants = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          console.warn('Token non trouvé, utilisation des données locales')
+          setLoading(false)
+          return
+        }
 
-    setTimeout(() => {
-      setTenants(mockTenants)
-      setLoading(false)
-    }, 1000)
+        const response = await fetch('/api/tenants', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.data) {
+            // Transformer les données de l'API pour correspondre à l'interface
+            const transformedTenants = data.data.map((tenant: any) => ({
+              id: tenant.id,
+              name: tenant.name,
+              email: tenant.email,
+              phone: tenant.phone || '',
+              address: tenant.address || '',
+              businessType: tenant.businessType,
+              currency: tenant.currency || 'XAF',
+              status: tenant.status || 'active',
+              createdAt: tenant.createdAt,
+              lastLogin: tenant.lastLogin,
+              users: tenant.userCount || 0,
+              features: businessTypeFeatures[tenant.businessType as keyof typeof businessTypeFeatures] || businessTypeFeatures.retail
+            }))
+            setTenants(transformedTenants)
+          }
+        } else {
+          console.warn('Erreur lors du chargement des tenants:', response.status)
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des tenants:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTenants()
   }, [])
 
   const handleBusinessTypeChange = (businessType: Tenant['businessType']) => {
