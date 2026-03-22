@@ -56,9 +56,6 @@ model User {
   sales             Sale[]
   expenses          Expense[]
   auditLogs         AuditLog[]
-  staff             Staff[]
-  inventoryLogs     InventoryLog[]
-  dashboardConfigs  DashboardConfig[]
 
   @@unique([email, tenantId])
   @@map("users")
@@ -312,6 +309,7 @@ model DashboardConfig {
   updatedAt         DateTime @updatedAt
   tenantId          String
 
+  // Relations
   tenant            Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId])
@@ -327,7 +325,7 @@ model AuditLog {
   tenantId    String?
   ipAddress   String?
   userAgent   String?
-  details     Json?    // Additional context
+  details     String?  // Additional context as JSON string
   timestamp   DateTime @default(now())
   createdAt   DateTime @default(now())
 
