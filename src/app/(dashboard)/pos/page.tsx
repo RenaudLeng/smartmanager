@@ -43,15 +43,6 @@ export default function POSPage() {
   
   // Initialize products data from API
   const [products, setProducts] = useState<Product[]>([])
-  const [productsLoading, setProductsLoading] = useState(true)
-  
-  // Load products from API
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const token = localStorage.getItem('token')
-        
-        // Si pas de token, utiliser des données par défaut sans erreur
         if (!token) {
           console.log('Utilisateur non connecté - utilisation des données par défaut')
           setProducts([])
@@ -103,7 +94,6 @@ export default function POSPage() {
   const [showScanner, setShowScanner] = useState(false)  // 🔥 NOUVEAU : État du scanner
   
   // États pour le processus de paiement
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
   const [customerAmount, setCustomerAmount] = useState<string>('')
   const [paymentStep, setPaymentStep] = useState<'method' | 'amount' | 'confirm'>('method')
 
@@ -303,11 +293,6 @@ export default function POSPage() {
       showNotification('error', 'Erreur lors de l\'enregistrement de la vente: ' + (error as Error).message)
     }
   }, [cart, getTotalAmount, customerAmount, selectedPaymentMethod, showNotification, tenantData])
-    // Clear cart and close payment modal
-    setCart([])
-    setShowPayment(false)
-    setShowTicket(true)
-  }, [cart, getTotalAmount, tenantData, showNotification, setSalesHistory, setCurrentSale, setCart, setShowPayment, setShowTicket, selectedPaymentMethod, customerAmount, calculateChange])
 
   return (
     <div className="min-h-screen bg-black">
