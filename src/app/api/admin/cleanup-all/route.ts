@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       console.error('Erreur lors du nettoyage de la base de données:', dbError)
       return NextResponse.json(
-        { success: false, error: 'Erreur lors du nettoyage: ' + dbError.message },
+        { success: false, error: 'Erreur lors du nettoyage: ' + (dbError as Error).message },
         { status: 500 }
       )
     }
