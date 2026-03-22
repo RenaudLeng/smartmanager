@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface UseOptimizedDataOptions<T> {
   fetchFn: () => Promise<T>
@@ -7,16 +7,20 @@ interface UseOptimizedDataOptions<T> {
   staleTime?: number
 }
 
-export function useOptimizedData<T>({ 
-  fetchFn, 
-  initialData, 
-  cacheKey, 
+export function useOptimizedData<T>({
+  fetchFn,
+  initialData,
+  cacheKey,
   staleTime = 300000 // 5 minutes par défaut
 }: UseOptimizedDataOptions<T>) {
   const [data, setData] = useState<T | undefined>(initialData)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastFetch, setLastFetch] = useState<number>(0)
+  
+  // Utiliser useRef pour éviter les changements de dépendances
+  const fetchFnRef = useRef(fetchFn)
+  fetchFnRef.current = fetchFn
 
   const fetchData = useCallback(async () => {
     try {
@@ -38,7 +42,7 @@ export function useOptimizedData<T>({
         }
       }
       
-      const result = await fetchFn()
+      const result = await fetchFnRef.current()
       setData(result)
       setLastFetch(Date.now())
       
@@ -53,7 +57,7 @@ export function useOptimizedData<T>({
     } finally {
       setLoading(false)
     }
-  }, [fetchFn, cacheKey, staleTime])
+  }, [cacheKey, staleTime])
 
   useEffect(() => {
     fetchData()
