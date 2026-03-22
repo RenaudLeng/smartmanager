@@ -88,7 +88,7 @@ export default function SuperAdminPage() {
   const sidebarItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3 },
     { id: 'tenants', label: 'Tenants', icon: Building2 },
-    { id: 'users', label: 'Gestion des utilisateurs et permissions', icon: UserCheck },
+    { id: 'users', label: 'Utilisateurs', icon: UserCheck },
     { id: 'reports', label: 'Rapports', icon: Database },
     { id: 'settings', label: 'Paramètres', icon: Settings }
   ]
