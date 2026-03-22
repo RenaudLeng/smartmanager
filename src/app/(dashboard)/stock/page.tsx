@@ -144,69 +144,108 @@ export default function StockPage() {
       return
     }
 
-    // Calculer le coût total du ravitaillement
-    const totalCost = parseInt(newProduct.purchasePrice || '0') * parseInt(newProduct.stock || '0')
-
-    // Créer la transaction financière pour le ravitaillement
-    if (totalCost > 0) {
-      const restockTransaction = {
-        type: 'expense' as const,
-        amount: totalCost,
-        currency: 'XAF',
-        description: `Ravitaillement stock - ${newProduct.name}`,
-        category: 'restock',
-        date: new Date().toISOString().split('T')[0],
-        source: {
-          type: newProduct.financialSource,
-          budgetLineId: newProduct.budgetLineId
-        }
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Vous devez être connecté pour ajouter un produit')
+        return
       }
-      console.log('Transaction financière:', restockTransaction)
+
+      // Calculer le coût total du ravitaillement
+      const totalCost = parseInt(newProduct.purchasePrice || '0') * parseInt(newProduct.stock || '0')
+
+      // Créer la transaction financière pour le ravitaillement
+      if (totalCost > 0) {
+        const restockTransaction = {
+          type: 'expense' as const,
+          amount: totalCost,
+          currency: 'XAF',
+          description: `Ravitaillement stock - ${newProduct.name}`,
+          category: 'restock',
+          date: new Date().toISOString().split('T')[0],
+          source: {
+            type: newProduct.financialSource as 'cash' | 'budget_line' | 'bank_transfer',
+            budgetLineId: newProduct.budgetLineId
+          }
+        }
+        
+        // Envoyer la transaction financière
+        await fetch('/api/financial/transactions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(restockTransaction)
+        })
+      }
+
+      // Créer le produit avec les calculs automatiques
+      const purchase = parseFloat(newProduct.purchasePrice) || 0
+      const selling = parseFloat(newProduct.price)
+      const margin = selling - purchase
+      const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
+
+      const productData = {
+        name: newProduct.name,
+        description: `Produit ajouté via le formulaire`,
+        sellingPrice: selling,
+        purchasePrice: purchase,
+        margin,
+        profitability,
+        quantity: parseInt(newProduct.stock),
+        minStock: parseInt(newProduct.minStock),
+        categoryId: '', // Sera mis à jour après récupération des catégories
+        supplierId: null
+      }
+
+      // Envoyer le produit à l'API
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(productData)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création du produit')
+      }
+
+      const createdProduct = await response.json()
+      console.log('Produit créé:', createdProduct)
+
+      // Rafraîchir les données
+      refetch()
+
+      // Réinitialiser le formulaire
+      setNewProduct({
+        name: '',
+        price: '',
+        purchasePrice: '',
+        margin: '',
+        profitability: '',
+        stock: '',
+        minStock: '',
+        category: 'Alimentaire',
+        supplier: '',
+        imageFile: null,
+        imagePreview: '',
+        financialSource: 'cash',
+        budgetLineId: '',
+        restockCost: ''
+      })
+      setIsEditMode(false)
+      setShowAddModal(false)
+      
+      alert('Produit ajouté avec succès !')
+
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du produit:', error)
+      alert('Erreur lors de l\'ajout du produit: ' + (error as Error).message)
     }
-
-    // Créer le produit avec les calculs automatiques
-    const purchase = parseFloat(newProduct.purchasePrice) || 0
-    const selling = parseFloat(newProduct.price)
-    const margin = selling - purchase
-    const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
-
-    const product = {
-      id: Date.now().toString(),
-      name: newProduct.name,
-      price: selling,
-      purchasePrice: purchase,
-      margin,
-      profitability,
-      stock: parseInt(newProduct.stock),
-      minStock: parseInt(newProduct.minStock),
-      category: newProduct.category,
-      status: parseInt(newProduct.stock) === 0 ? 'out_of_stock' : 
-              parseInt(newProduct.stock) <= parseInt(newProduct.minStock) ? 'low_stock' : 'in_stock' as 'in_stock' | 'low_stock' | 'out_of_stock',
-      supplier: newProduct.supplier || undefined,
-      image: newProduct.imagePreview || undefined,
-      lastUpdated: new Date().toISOString().split('T')[0]
-    }
-    setProducts([...products, product])
-
-    // Réinitialiser le formulaire
-    setNewProduct({
-      name: '',
-      price: '',
-      purchasePrice: '',
-      margin: '',
-      profitability: '',
-      stock: '',
-      minStock: '',
-      category: 'Alimentaire',
-      supplier: '',
-      imageFile: null,
-      imagePreview: '',
-      financialSource: 'cash',
-      budgetLineId: '',
-      restockCost: ''
-    })
-    setIsEditMode(false)
-    setShowAddModal(false)
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,30 +293,86 @@ export default function StockPage() {
     }
   }
 
-  const handleAdjustStock = () => {
+  const handleAdjustStock = async () => {
     if (selectedProduct) {
       const newStock = prompt(`Nouveau stock pour ${selectedProduct.name}:`, selectedProduct.stock.toString())
       if (newStock !== null && !isNaN(parseInt(newStock))) {
-        const updatedStock = parseInt(newStock)
-        const updatedProduct = {
-          ...selectedProduct,
-          stock: updatedStock,
-          status: (updatedStock === 0 ? 'out_of_stock' : 
-                  updatedStock <= selectedProduct.minStock ? 'low_stock' : 'in_stock') as 'in_stock' | 'low_stock' | 'out_of_stock',
-          lastUpdated: new Date().toISOString().split('T')[0]
+        try {
+          const token = localStorage.getItem('token')
+          if (!token) {
+            alert('Vous devez être connecté pour modifier le stock')
+            return
+          }
+
+          const updatedStock = parseInt(newStock)
+          
+          // Envoyer la mise à jour à l'API
+          const response = await fetch(`/api/products/${selectedProduct.id}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              quantity: updatedStock
+            })
+          })
+
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.error || 'Erreur lors de la mise à jour du stock')
+          }
+
+          // Rafraîchir les données
+          refetch()
+          setShowDetailsModal(false)
+          setSelectedProduct(null)
+          
+          alert('Stock mis à jour avec succès !')
+
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du stock:', error)
+          alert('Erreur lors de la mise à jour du stock: ' + (error as Error).message)
         }
-        setProducts(products.map(p => p.id === selectedProduct.id ? updatedProduct : p))
-        setShowDetailsModal(false)
       }
     }
   }
 
-  const handleDeleteProduct = () => {
+  const handleDeleteProduct = async () => {
     if (selectedProduct) {
       if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedProduct.name}" ?`)) {
-        setProducts(products.filter(p => p.id !== selectedProduct.id))
-        setShowDetailsModal(false)
-        setSelectedProduct(null)
+        try {
+          const token = localStorage.getItem('token')
+          if (!token) {
+            alert('Vous devez être connecté pour supprimer un produit')
+            return
+          }
+
+          // Envoyer la suppression à l'API
+          const response = await fetch(`/api/products/${selectedProduct.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.error || 'Erreur lors de la suppression du produit')
+          }
+
+          // Rafraîchir les données
+          refetch()
+          setShowDetailsModal(false)
+          setSelectedProduct(null)
+          
+          alert('Produit supprimé avec succès !')
+
+        } catch (error) {
+          console.error('Erreur lors de la suppression du produit:', error)
+          alert('Erreur lors de la suppression du produit: ' + (error as Error).message)
+        }
       }
     }
   }
