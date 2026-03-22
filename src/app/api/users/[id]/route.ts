@@ -55,13 +55,13 @@ export async function PUT(
       where: { id },
       data: validatedData,
       include: {
-        tenant: {
+        tenant: existingUser.tenantId ? {
           select: {
             id: true,
             name: true,
             businessType: true
           }
-        }
+        } : false
       }
     })
 

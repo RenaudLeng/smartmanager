@@ -76,13 +76,18 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
 
   const handleUserAction = async (action: string, user: GlobalUser, data?: any) => {
     try {
-      // Empêcher les actions sur le SuperAdmin
-      if (user.role === 'super_admin' && (action === 'delete' || action === 'suspend')) {
-        alert('Impossible de supprimer ou suspendre un SuperAdmin')
+      // Empêcher toutes les actions sur le SuperAdmin sauf 'view'
+      if (user.role === 'super_admin' && action !== 'view') {
+        alert('Le compte SuperAdmin ne peut pas être modifié')
         return
       }
 
       switch (action) {
+        case 'view':
+          // Just afficher les détails (pourrait ouvrir un modal plus tard)
+          console.log('Vue utilisateur:', user)
+          break
+
         case 'create':
           const createResponse = await apiService.createUser(data)
           if (createResponse.success && createResponse.data) {
