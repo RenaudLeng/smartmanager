@@ -31,7 +31,7 @@ interface GlobalUser {
   id: string
   name: string
   email: string
-  role: 'admin' | 'manager' | 'cashier' | 'seller'
+  role: 'admin' | 'manager' | 'cashier' | 'seller' | 'super_admin'
   tenantId: string
   tenantName: string
   businessType: string
@@ -76,11 +76,20 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
 
   const handleUserAction = async (action: string, user: GlobalUser, data?: any) => {
     try {
+      // Empêcher les actions sur le SuperAdmin
+      if (user.role === 'super_admin' && (action === 'delete' || action === 'suspend')) {
+        alert('Impossible de supprimer ou suspendre un SuperAdmin')
+        return
+      }
+
       switch (action) {
         case 'create':
           const createResponse = await apiService.createUser(data)
           if (createResponse.success && createResponse.data) {
             setUsers(prev => [...prev, createResponse.data])
+            alert('Utilisateur créé avec succès')
+          } else {
+            alert('Erreur lors de la création: ' + (createResponse.error || 'Erreur inconnue'))
           }
           onUserAction(action, user, data)
           break
@@ -89,6 +98,9 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
           const updateResponse = await apiService.updateUser(user.id, data)
           if (updateResponse.success && updateResponse.data) {
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, ...updateResponse.data } : u))
+            alert('Utilisateur mis à jour avec succès')
+          } else {
+            alert('Erreur lors de la mise à jour: ' + (updateResponse.error || 'Erreur inconnue'))
           }
           onUserAction(action, user, data)
           break
@@ -97,14 +109,35 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
           const suspendResponse = await apiService.suspendUser(user.id, data.reason)
           if (suspendResponse.success) {
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: 'suspended' } : u))
+            alert('Utilisateur suspendu avec succès')
+          } else {
+            alert('Erreur lors de la suspension: ' + (suspendResponse.error || 'Erreur inconnue'))
+          }
+          onUserAction(action, user, data)
+          break
+
+        case 'activate':
+          // Pour activer, on utilise update avec isActive: true
+          const activateResponse = await apiService.updateUser(user.id, { isActive: true })
+          if (activateResponse.success) {
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: 'active' } : u))
+            alert('Utilisateur activé avec succès')
+          } else {
+            alert('Erreur lors de l\'activation: ' + (activateResponse.error || 'Erreur inconnue'))
           }
           onUserAction(action, user, data)
           break
 
         case 'delete':
+          if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
+            return
+          }
           const deleteResponse = await apiService.deleteUser(user.id)
           if (deleteResponse.success) {
             setUsers(prev => prev.filter(u => u.id !== user.id))
+            alert('Utilisateur supprimé avec succès')
+          } else {
+            alert('Erreur lors de la suppression: ' + (deleteResponse.error || 'Erreur inconnue'))
           }
           onUserAction(action, user, data)
           break
@@ -114,6 +147,7 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
       }
     } catch (error) {
       console.error('Erreur action utilisateur:', error)
+      alert('Une erreur est survenue lors de l\'action')
     }
   }
 
