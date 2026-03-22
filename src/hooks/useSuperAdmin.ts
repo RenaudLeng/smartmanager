@@ -49,9 +49,15 @@ export default function useSuperAdmin() {
       }
 
       // Charger les logs d'audit
-      const logsResponse = await apiService.getAuditLogs()
-      if (logsResponse.success && logsResponse.data) {
-        setAuditLogs(logsResponse.data)
+      try {
+        const logsResponse = await apiService.getAuditLogs()
+        if (logsResponse.success && logsResponse.data) {
+          setAuditLogs(logsResponse.data)
+        }
+      } catch (logError) {
+        console.warn('Erreur lors du chargement des logs d\'audit (normal pour nouvelle plateforme):', logError)
+        // Ne pas bloquer le chargement si les logs ne sont pas disponibles
+        setAuditLogs([])
       }
 
     } catch (err) {

@@ -33,6 +33,7 @@ model Tenant {
   inventoryLogs     InventoryLog[]
   subscriptions     Subscription[]
   dashboardConfigs   DashboardConfig[]
+  auditLogs         AuditLog[]
 
   @@map("tenants")
 }
@@ -54,6 +55,10 @@ model User {
   tenant            Tenant?  @relation(fields: [tenantId], references: [id])
   sales             Sale[]
   expenses          Expense[]
+  auditLogs         AuditLog[]
+  staff             Staff[]
+  inventoryLogs     InventoryLog[]
+  dashboardConfigs  DashboardConfig[]
 
   @@unique([email, tenantId])
   @@map("users")
@@ -311,4 +316,24 @@ model DashboardConfig {
 
   @@unique([tenantId])
   @@map("dashboard_configs")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // create, update, delete, login, logout, suspend, etc.
+  entity      String   // user, tenant, product, sale, etc.
+  entityId    String
+  userId      String
+  tenantId    String?
+  ipAddress   String?
+  userAgent   String?
+  details     Json?    // Additional context
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id])
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@map("audit_logs")
 }
