@@ -241,8 +241,8 @@ export default function SuperAdminPage() {
                             log.action === 'suspend' ? 'bg-yellow-500' : 'bg-blue-500'
                           }`} />
                           <div>
-                            <p className="text-white font-medium">{log.description || log.action}</p>
-                            <p className="text-gray-400 text-sm">{log.targetName || log.targetId}</p>
+                            <p className="text-white font-medium">{log.action} - {log.entity}</p>
+                            <p className="text-gray-400 text-sm">par {log.userName}</p>
                           </div>
                         </div>
                         <span className="text-gray-400 text-sm">
@@ -255,7 +255,11 @@ export default function SuperAdminPage() {
                     ))
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-gray-400">Aucune activité récente</p>
+                      <Activity className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                      <p className="text-gray-400 mb-2">Aucune activité récente</p>
+                      <p className="text-gray-500 text-sm">
+                        Les activités système apparaîtront ici dès que des utilisateurs commenceront à utiliser la plateforme
+                      </p>
                     </div>
                   )}
                 </div>

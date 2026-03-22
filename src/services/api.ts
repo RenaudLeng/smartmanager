@@ -295,6 +295,11 @@ class ApiService {
       method: 'POST',
     })
   }
+
+  // Audit Logs
+  async getAuditLogs() {
+    return this.request<any[]>('/audit/logs')
+  }
 }
 
 export const apiService = new ApiService()

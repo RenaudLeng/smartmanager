@@ -48,6 +48,12 @@ export default function useSuperAdmin() {
         setGlobalStats(statsResponse.data)
       }
 
+      // Charger les logs d'audit
+      const logsResponse = await apiService.getAuditLogs()
+      if (logsResponse.success && logsResponse.data) {
+        setAuditLogs(logsResponse.data)
+      }
+
     } catch (err) {
       console.error('Erreur lors du chargement des données:', err)
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
