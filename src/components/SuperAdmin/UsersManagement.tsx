@@ -58,44 +58,17 @@ export default function UsersManagement({ tenants, onUserAction }: UserManagemen
   const loadUsers = async () => {
     try {
       setLoading(true)
-      // Appel API réel
+      // Appel API réel uniquement
       const response = await apiService.getUsers()
       if (response.success && response.data) {
         setUsers(response.data)
       } else {
-        // Fallback avec mock data si API non disponible
-        const mockUsers: GlobalUser[] = [
-          {
-            id: '1',
-            name: 'Jean Dupont',
-            email: 'jean@boutique-test.com',
-            role: 'admin',
-            tenantId: '1',
-            tenantName: 'Boutique Test',
-            businessType: 'retail',
-            status: 'active',
-            lastLogin: new Date(Date.now() - 3600000),
-            createdAt: new Date('2024-03-01'),
-            permissions: ['read', 'write', 'delete', 'manage_users']
-          },
-          {
-            id: '2',
-            name: 'Marie Curie',
-            email: 'marie@bar-central.com',
-            role: 'manager',
-            tenantId: '2',
-            tenantName: 'Bar Le Central',
-            businessType: 'bar',
-            status: 'active',
-            lastLogin: new Date(Date.now() - 7200000),
-            createdAt: new Date('2024-02-15'),
-            permissions: ['read', 'write', 'manage_inventory']
-          }
-        ]
-        setUsers(mockUsers)
+        console.warn('Erreur lors du chargement des utilisateurs:', response.error)
+        setUsers([]) // Afficher une liste vide si erreur
       }
     } catch (error) {
       console.error('Erreur chargement utilisateurs:', error)
+      setUsers([]) // Afficher une liste vide si erreur
     } finally {
       setLoading(false)
     }
