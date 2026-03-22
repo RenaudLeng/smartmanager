@@ -191,29 +191,70 @@ export default function TenantManager() {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (editingTenant) {
-      // Update existing tenant
-      setTenants(tenants.map(t => 
-        t.id === editingTenant.id 
-          ? { ...t, ...formData }
-          : t
-      ))
-    } else {
-      // Create new tenant
-      const newTenant: Tenant = {
-        id: Date.now().toString(),
-        ...formData,
-        status: 'active',
-        createdAt: new Date().toISOString().split('T')[0],
-        users: 1
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Vous devez être connecté pour effectuer cette action')
+        return
       }
-      setTenants([...tenants, newTenant])
-    }
 
-    resetForm()
+      if (editingTenant) {
+        // Update existing tenant
+        const response = await fetch(`/api/tenants/${editingTenant.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        })
+
+        if (response.ok) {
+          const updatedTenant = await response.json()
+          setTenants(tenants.map(t => 
+            t.id === editingTenant.id 
+              ? { ...t, ...updatedTenant.data }
+              : t
+          ))
+        } else {
+          const error = await response.json()
+          alert('Erreur lors de la mise à jour: ' + error.error)
+          return
+        }
+      } else {
+        // Create new tenant
+        const response = await fetch('/api/tenants', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...formData,
+            adminName: 'Admin par défaut',
+            adminEmail: formData.email,
+            subscriptionPlan: 'free'
+          })
+        })
+
+        if (response.ok) {
+          const newTenant = await response.json()
+          setTenants([...tenants, newTenant.data])
+        } else {
+          const error = await response.json()
+          alert('Erreur lors de la création: ' + error.error)
+          return
+        }
+      }
+
+      resetForm()
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error)
+      alert('Une erreur est survenue')
+    }
   }
 
   const resetForm = () => {
@@ -244,18 +285,72 @@ export default function TenantManager() {
     setShowModal(true)
   }
 
-  const handleDelete = (tenantId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce tenant ?')) {
-      setTenants(tenants.filter(t => t.id !== tenantId))
+  const handleDelete = async (tenantId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce tenant ? Cette action est irréversible.')) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Vous devez être connecté pour effectuer cette action')
+        return
+      }
+
+      const response = await fetch(`/api/tenants/${tenantId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        setTenants(tenants.filter(t => t.id !== tenantId))
+        alert('Tenant supprimé avec succès')
+      } else {
+        const error = await response.json()
+        alert('Erreur lors de la suppression: ' + error.error)
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error)
+      alert('Une erreur est survenue')
     }
   }
 
-  const handleStatusChange = (tenantId: string, status: Tenant['status']) => {
-    setTenants(tenants.map(t => 
-      t.id === tenantId 
-        ? { ...t, status }
-        : t
-    ))
+  const handleStatusChange = async (tenantId: string, status: Tenant['status']) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Vous devez être connecté pour effectuer cette action')
+        return
+      }
+
+      const response = await fetch(`/api/tenants/${tenantId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      })
+
+      if (response.ok) {
+        const updatedTenant = await response.json()
+        setTenants(tenants.map(t => 
+          t.id === tenantId 
+            ? { ...t, status: updatedTenant.data.status }
+            : t
+        ))
+        alert(`Tenant ${status === 'active' ? 'activé' : 'suspendu'} avec succès`)
+      } else {
+        const error = await response.json()
+        alert('Erreur lors du changement de statut: ' + error.error)
+      }
+    } catch (error) {
+      console.error('Erreur lors du changement de statut:', error)
+      alert('Une erreur est survenue')
+    }
   }
 
   const filteredTenants = tenants.filter(tenant => {
