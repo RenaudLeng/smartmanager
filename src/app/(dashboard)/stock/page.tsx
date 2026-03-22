@@ -52,28 +52,31 @@ export default function StockPage() {
   // Hook optimisé pour charger les produits avec cache
   const { data: productsData, loading, error, refetch } = useOptimizedData<Product[]>({
     fetchFn: async () => {
-      const token = localStorage.getItem('token')
-      
-      if (!token) {
-        console.log('Utilisateur non connecté - utilisation des données par défaut')
-        return []
-      }
-      
-      const response = await fetch('/api/products', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      try {
+        const token = localStorage.getItem('token')
+        
+        if (!token) {
+          console.log('Utilisateur non connecté - utilisation des données par défaut')
+          return []
         }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des produits')
-      }
-      
-      const data = await response.json()
-      
-      // Transformer les données de l'API pour correspondre à l'interface Product
-      return data.products?.map((product: {
+        
+        const response = await fetch('/api/products', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!response.ok) {
+          console.warn('Erreur de chargement des produits:', response.status, response.statusText)
+          // Retourner un tableau vide au lieu de lancer une erreur
+          return []
+        }
+        
+        const data = await response.json()
+        
+        // Transformer les données de l'API pour correspondre à l'interface Product
+        return (data.products || []).map((product: {
         id: string
         name: string
         description?: string
@@ -108,6 +111,10 @@ export default function StockPage() {
                 product.quantity <= (product.minStock || 0) ? 'low_stock' : 'in_stock',
         lastUpdated: product.updatedAt
       })) || []
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits:', error)
+        return []
+      }
     },
     cacheKey: 'products_cache',
     staleTime: 300000 // 5 minutes
