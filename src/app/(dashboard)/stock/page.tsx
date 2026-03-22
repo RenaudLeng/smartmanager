@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Package, Search, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
 import { useOptimizedData } from '@/hooks/useOptimizedData'
-import OptimizedLoading from '@/components/UI/OptimizedLoading'
+import OptimizedLoading from '@/components/ui/OptimizedLoading'
 
 interface Product {
   id: string
@@ -50,7 +50,7 @@ export default function StockPage() {
   })
 
   // Hook optimisé pour charger les produits avec cache
-  const { data: productsData, loading, error, refetch } = useOptimizedData<Product[]>({
+  const { data: productsData, loading, refetch } = useOptimizedData<Product[]>({
     fetchFn: async () => {
       try {
         const token = localStorage.getItem('token')
@@ -120,7 +120,7 @@ export default function StockPage() {
     staleTime: 300000 // 5 minutes
   })
 
-  const products = productsData || []
+  const products = useMemo(() => productsData || [], [productsData])
 
   // Memoization pour les catégories et filtres
   const categories = useMemo(() => 
@@ -136,15 +136,6 @@ export default function StockPage() {
     }), 
     [products, searchTerm, selectedCategory]
   )
-
-  // Optimisation des stats
-  const stats = useMemo(() => ({
-    total: products.length,
-    inStock: products.filter(p => p.status === 'in_stock').length,
-    lowStock: products.filter(p => p.status === 'low_stock').length,
-    outOfStock: products.filter(p => p.status === 'out_of_stock').length
-  }), [products])
-
 
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.stock || !newProduct.minStock) {
