@@ -208,8 +208,22 @@ export default function StockPage() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la création du produit')
+        let errorMessage = 'Erreur lors de la création du produit'
+        
+        // Gérer spécifiquement les erreurs 401
+        if (response.status === 401) {
+          errorMessage = 'Vous devez être connecté pour ajouter un produit'
+        } else {
+          try {
+            const error = await response.json()
+            errorMessage = error.error || errorMessage
+          } catch {
+            // Si la réponse n'est pas du JSON, utiliser le statut
+            errorMessage = `Erreur ${response.status}: ${response.statusText}`
+          }
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const createdProduct = await response.json()
@@ -317,8 +331,20 @@ export default function StockPage() {
           })
 
           if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.error || 'Erreur lors de la mise à jour du stock')
+            let errorMessage = 'Erreur lors de la mise à jour du stock'
+            
+            if (response.status === 401) {
+              errorMessage = 'Vous devez être connecté pour modifier le stock'
+            } else {
+              try {
+                const error = await response.json()
+                errorMessage = error.error || errorMessage
+              } catch (parseError) {
+                errorMessage = `Erreur ${response.status}: ${response.statusText}`
+              }
+            }
+            
+            throw new Error(errorMessage)
           }
 
           // Rafraîchir les données
@@ -356,8 +382,20 @@ export default function StockPage() {
           })
 
           if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.error || 'Erreur lors de la suppression du produit')
+            let errorMessage = 'Erreur lors de la suppression du produit'
+            
+            if (response.status === 401) {
+              errorMessage = 'Vous devez être connecté pour supprimer un produit'
+            } else {
+              try {
+                const error = await response.json()
+                errorMessage = error.error || errorMessage
+              } catch (parseError) {
+                errorMessage = `Erreur ${response.status}: ${response.statusText}`
+              }
+            }
+            
+            throw new Error(errorMessage)
           }
 
           // Rafraîchir les données
