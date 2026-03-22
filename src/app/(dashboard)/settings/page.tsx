@@ -250,48 +250,70 @@ export default function SettingsPage() {
     console.log('🔥 BOUTON ADD USER FONCTIONNE!')
     console.log('Nouvel utilisateur :', newUser)
     if (!newUser.name || !newUser.email) {
-      console.log('Erreur : champs obligatoires manquants')
-      showNotification('error', 'Veuillez remplir tous les champs obligatoires')
-      return
-    }
 
-    const user: AppUser = {
-      id: Date.now().toString(),
-      name: newUser.name!,
-      email: newUser.email!,
-      phone: newUser.phone || '',
-      role: newUser.role as AppUser['role'],
-      permissions: newUser.permissions!,
-      status: newUser.status as AppUser['status'],
-      createdAt: new Date().toISOString().split('T')[0]
-    }
+      if (!newUser.name || !newUser.email) {
+        console.log('Erreur : champs obligatoires manquants')
+        showNotification('error', 'Veuillez remplir tous les champs obligatoires')
+        return
+      }
 
-    if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? { ...user, id: editingUser.id } : u))
-      setEditingUser(null)
-      showNotification('success', 'Utilisateur mis à jour avec succès!')
-    } else {
-      setUsers([...users, user])
-      showNotification('success', 'Utilisateur créé avec succès!')
-    }
+      const user = {
+        name: newUser.name!,
+        email: newUser.email!,
+        phone: newUser.phone || '',
+        role: newUser.role as AppUser['role'],
+        permissions: newUser.permissions!,
+        status: newUser.status as AppUser['status'],
+        createdAt: new Date().toISOString().split('T')[0]
+      }
 
-    setNewUser({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'employee',
-      permissions: {
-        dashboard: true,
-        sales: false,
-        inventory: false,
-        financial: false,
-        reports: false,
-        users: false,
-        settings: false
-      },
-      status: 'active'
-    })
-    setShowUserModal(false)
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(user)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création de l\'utilisateur')
+      }
+
+      const createdUser = await response.json()
+
+      if (editingUser) {
+        setUsers(users.map(u => u.id === editingUser.id ? { ...createdUser, id: editingUser.id } : u))
+        setEditingUser(null)
+        showNotification('success', 'Utilisateur mis à jour avec succès!')
+      } else {
+        setUsers([...users, createdUser])
+        showNotification('success', 'Utilisateur créé avec succès!')
+      }
+
+      setNewUser({
+        name: '',
+        email: '',
+        phone: '',
+        role: 'employee',
+        permissions: {
+          dashboard: true,
+          sales: false,
+          inventory: false,
+          financial: false,
+          reports: false,
+          users: false,
+          settings: false
+        },
+        status: 'active'
+      })
+      setShowUserModal(false)
+
+    } catch (error) {
+      console.error('Erreur lors de la gestion de l\'utilisateur:', error)
+      showNotification('error', 'Erreur lors de la gestion de l\'utilisateur: ' + (error as Error).message)
+    }
   }
 
   const handleEditUser = (user: AppUser) => {
@@ -312,12 +334,37 @@ export default function SettingsPage() {
     setShowDeleteModal(true)
   }
 
-  const confirmDeleteUser = () => {
-    if (userToDelete) {
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return
+    
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        showNotification('error', 'Vous devez être connecté pour supprimer un utilisateur')
+        return
+      }
+
+      const response = await fetch(`/api/users/${userToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression de l\'utilisateur')
+      }
+
       setUsers(users.filter(u => u.id !== userToDelete))
       showNotification('success', 'Utilisateur supprimé avec succès!')
       setShowDeleteModal(false)
       setUserToDelete(null)
+
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'utilisateur:', error)
+      showNotification('error', 'Erreur lors de la suppression de l\'utilisateur: ' + (error as Error).message)
     }
   }
 
@@ -326,12 +373,44 @@ export default function SettingsPage() {
     setUserToDelete(null)
   }
 
-  const handleToggleUserStatus = (userId: string) => {
-    setUsers(users.map(u => 
-      u.id === userId 
-        ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' }
-        : u
-    ))
+  const handleToggleUserStatus = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        showNotification('error', 'Vous devez être connecté pour modifier le statut d\'un utilisateur')
+        return
+      }
+
+      const user = users.find(u => u.id === userId)
+      if (!user) return
+
+      const newStatus = user.status === 'active' ? 'inactive' : 'active'
+
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la modification du statut')
+      }
+
+      setUsers(users.map(u => 
+        u.id === userId 
+          ? { ...u, status: newStatus }
+          : u
+      ))
+      showNotification('success', `Statut de l'utilisateur modifié avec succès!`)
+
+    } catch (error) {
+      console.error('Erreur lors de la modification du statut:', error)
+      showNotification('error', 'Erreur lors de la modification du statut: ' + (error as Error).message)
+    }
   }
 
   const getRoleLabel = (role: AppUser['role']) => {

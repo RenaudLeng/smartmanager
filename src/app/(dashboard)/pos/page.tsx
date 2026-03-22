@@ -213,52 +213,96 @@ export default function POSPage() {
       return
     }
     
-    // Create sale record with unique ID using timestamp
-    const timestamp = new Date().getTime()
-    const saleId = `sale-${timestamp}`
-    const sale: Sale = {
-      id: saleId,
-      items: [...cart],
-      total: totalAmount,
-      paymentMethod: selectedPaymentMethod,
-      date: new Date()
-    }
-    
-    // Add to sales history
-    setSalesHistory(prev => [sale, ...prev])
-    setCurrentSale(sale)
-    
-    // Try to print ticket
     try {
-      if (bluetoothPrintService.isConnected()) {
-        await bluetoothPrintService.printTicket({
-          orderId: sale.id,
-          orderNumber: sale.id,
-          businessName: tenantData.getBusinessLabel(),
-          customerName: 'Client',
-          items: cart.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.price * item.quantity
-          })),
-          totalAmount: totalAmount,
-          paymentMethod: selectedPaymentMethod,
-          date: new Date().toLocaleString('fr-GA')
-        })
+      const token = localStorage.getItem('token')
+      if (!token) {
+        showNotification('error', 'Vous devez être connecté pour effectuer une vente')
+        return
       }
+
+      // Create sale record with unique ID using timestamp
+      const timestamp = new Date().getTime()
+      const saleId = `sale-${timestamp}`
+      const sale: Sale = {
+        id: saleId,
+        items: [...cart],
+        total: totalAmount,
+        paymentMethod: selectedPaymentMethod,
+        date: new Date()
+      }
+
+      // Envoyer la vente à l'API
+      const response = await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            totalPrice: item.price * item.quantity
+          })),
+          totalAmount,
+          paymentMethod: selectedPaymentMethod,
+          customerAmount: paidAmount,
+          changeAmount: paidAmount - totalAmount
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de l\'enregistrement de la vente')
+      }
+
+      const createdSale = await response.json()
+      console.log('Vente créée:', createdSale)
+
+      // Add to sales history
+      setSalesHistory(prev => [createdSale, ...prev])
+      setCurrentSale(createdSale)
+      
+      // Try to print ticket
+      try {
+        if (bluetoothPrintService.isConnected()) {
+          await bluetoothPrintService.printTicket({
+            orderId: createdSale.id,
+            orderNumber: createdSale.id,
+            businessName: tenantData.getBusinessLabel(),
+            customerName: 'Client',
+            items: cart.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.price * item.quantity
+            })),
+            totalAmount: totalAmount,
+            paymentMethod: selectedPaymentMethod,
+            date: new Date().toLocaleString('fr-GA')
+          })
+        }
+      } catch (printError) {
+        console.warn('Erreur d\'impression:', printError)
+        showNotification('error', 'Erreur lors de l\'impression du ticket')
+      }
+      
+      showNotification('success', 'Vente enregistrée avec succès!')
+      
+      // Clear cart and close payment modal
+      setCart([])
+      setShowPayment(false)
+      setShowTicket(true)
+      setSelectedPaymentMethod('')
+      setCustomerAmount('')
+      setPaymentStep('method')
+
     } catch (error) {
-      console.error('Erreur impression ticket:', error)
+      console.error('Erreur lors de l\'enregistrement de la vente:', error)
+      showNotification('error', 'Erreur lors de l\'enregistrement de la vente: ' + (error as Error).message)
     }
-    
-    // Show success notification
-    const changeAmount = calculateChange()
-    let message = `Paiement de ${totalAmount.toLocaleString('fr-GA')} XAF par ${selectedPaymentMethod === 'cash' ? 'Espèces' : selectedPaymentMethod} confirmé!`
-    if (selectedPaymentMethod === 'cash' && changeAmount > 0) {
-      message += ` Monnaie: ${changeAmount.toLocaleString('fr-GA')} XAF`
-    }
-    showNotification('success', message, 1500)
-    
+  }, [cart, getTotalAmount, customerAmount, selectedPaymentMethod, showNotification, tenantData])
     // Clear cart and close payment modal
     setCart([])
     setShowPayment(false)
