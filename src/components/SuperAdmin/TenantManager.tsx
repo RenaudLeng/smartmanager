@@ -11,13 +11,9 @@ import {
   XCircle, 
   AlertTriangle,
   Users,
-  Settings,
   Save,
   X,
-  Search,
-  Filter,
-  Download,
-  RefreshCw
+  Search
 } from 'lucide-react'
 
 interface Tenant {
@@ -150,152 +146,127 @@ export default function TenantManager() {
   })
 
   // Charger les vrais tenants depuis l'API
-  useEffect(() => {
-    const loadTenants = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-          console.warn('Token non trouvé, utilisation des données locales')
-          setLoading(false)
-          return
-        }
-
-        const response = await fetch('/api/tenants', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success && data.data) {
-            // Transformer les données de l'API pour correspondre à l'interface
-            const transformedTenants = data.data.map((tenant: any) => ({
-              id: tenant.id,
-              name: tenant.name,
-              email: tenant.email,
-              phone: tenant.phone || '',
-              address: tenant.address || '',
-              businessType: tenant.businessType,
-              currency: tenant.currency || 'XAF',
-              status: tenant.status || 'active',
-              createdAt: tenant.createdAt,
-              lastLogin: tenant.lastLogin,
-              users: tenant.userCount || 0,
-              features: businessTypeFeatures[tenant.businessType as keyof typeof businessTypeFeatures] || businessTypeFeatures.retail
-            }))
-            setTenants(transformedTenants)
-          }
-        } else {
-          console.warn('Erreur lors du chargement des tenants:', response.status)
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des tenants:', error)
-      } finally {
+  const loadTenants = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.warn('Token non trouvé, utilisation des données locales')
         setLoading(false)
+        return
       }
-    }
 
+      const response = await fetch('/api/tenants', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data) {
+          // Transformer les données de l'API pour correspondre à l'interface
+          const transformedTenants = data.data.map((tenant: {
+            id: string;
+            name: string;
+            email: string;
+            phone?: string;
+            address?: string;
+            businessType: string;
+            currency: string;
+            status: string;
+            createdAt: string;
+            lastLogin?: string;
+            _count: { users: number };
+            features?: string;
+          }) => ({
+            id: tenant.id,
+            name: tenant.name,
+            email: tenant.email,
+            phone: tenant.phone || '',
+            address: tenant.address || '',
+            businessType: tenant.businessType as Tenant['businessType'],
+            currency: tenant.currency,
+            status: tenant.status as Tenant['status'],
+            createdAt: tenant.createdAt,
+            lastLogin: tenant.lastLogin,
+            users: tenant._count.users,
+            features: tenant.features ? JSON.parse(tenant.features) : undefined
+          }))
+          setTenants(transformedTenants)
+        }
+      } else {
+        console.warn('Erreur lors du chargement des tenants:', response.statusText)
+      }
+    } catch (error) {
+      console.error('Erreur chargement tenants:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     loadTenants()
   }, [])
 
   const handleBusinessTypeChange = (businessType: Tenant['businessType']) => {
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       businessType,
       features: businessTypeFeatures[businessType]
-    })
-  }
-
-  const handleFeatureToggle = (feature: keyof Tenant['features']) => {
-    setFormData({
-      ...formData,
-      features: {
-        ...formData.features,
-        [feature]: !formData.features[feature]
-      }
-    })
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        alert('Vous devez être connecté pour effectuer cette action')
+        alert('Token non trouvé')
         return
       }
 
-      if (editingTenant) {
-        // Update existing tenant
-        const response = await fetch(`/api/tenants/${editingTenant.id}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        })
+      const response = await fetch('/api/tenants', {
+        method: editingTenant ? 'PUT' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
 
-        if (response.ok) {
-          const updatedTenant = await response.json()
-          setTenants(tenants.map(t => 
-            t.id === editingTenant.id 
-              ? { ...t, ...updatedTenant.data }
-              : t
-          ))
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          if (editingTenant) {
+            setTenants(prev => prev.map(t => t.id === editingTenant.id ? { ...t, ...formData } : t))
+            alert('Tenant mis à jour avec succès')
+          } else {
+            setTenants(prev => [...prev, result.data])
+            alert('Tenant créé avec succès')
+          }
+          setShowModal(false)
+          setEditingTenant(null)
+          setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            address: '',
+            businessType: 'retail',
+            currency: 'XAF',
+            features: businessTypeFeatures.retail
+          })
+          loadTenants()
         } else {
-          const error = await response.json()
-          alert('Erreur lors de la mise à jour: ' + error.error)
-          return
+          alert('Erreur: ' + (result.error || 'Erreur inconnue'))
         }
       } else {
-        // Create new tenant
-        const response = await fetch('/api/tenants', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ...formData,
-            adminName: 'Admin par défaut',
-            adminEmail: formData.email,
-            subscriptionPlan: 'free'
-          })
-        })
-
-        if (response.ok) {
-          const newTenant = await response.json()
-          setTenants([...tenants, newTenant.data])
-        } else {
-          const error = await response.json()
-          alert('Erreur lors de la création: ' + error.error)
-          return
-        }
+        alert('Erreur lors de la requête')
       }
-
-      resetForm()
     } catch (error) {
-      console.error('Erreur lors de la soumission:', error)
+      console.error('Erreur création tenant:', error)
       alert('Une erreur est survenue')
     }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      businessType: 'retail',
-      currency: 'XAF',
-      features: businessTypeFeatures.retail
-    })
-    setEditingTenant(null)
-    setShowModal(false)
   }
 
   const handleEdit = (tenant: Tenant) => {
@@ -307,24 +278,24 @@ export default function TenantManager() {
       address: tenant.address,
       businessType: tenant.businessType,
       currency: tenant.currency,
-      features: tenant.features
+      features: tenant.features || businessTypeFeatures[tenant.businessType]
     })
     setShowModal(true)
   }
 
-  const handleDelete = async (tenantId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce tenant ? Cette action est irréversible.')) {
+  const handleDelete = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce tenant ?')) {
       return
     }
 
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        alert('Vous devez être connecté pour effectuer cette action')
+        alert('Token non trouvé')
         return
       }
 
-      const response = await fetch(`/api/tenants/${tenantId}`, {
+      const response = await fetch(`/api/tenants/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -333,27 +304,26 @@ export default function TenantManager() {
       })
 
       if (response.ok) {
-        setTenants(tenants.filter(t => t.id !== tenantId))
+        setTenants(prev => prev.filter(t => t.id !== id))
         alert('Tenant supprimé avec succès')
       } else {
-        const error = await response.json()
-        alert('Erreur lors de la suppression: ' + error.error)
+        alert('Erreur lors de la suppression')
       }
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error)
+      console.error('Erreur suppression tenant:', error)
       alert('Une erreur est survenue')
     }
   }
 
-  const handleStatusChange = async (tenantId: string, status: Tenant['status']) => {
+  const handleStatusChange = async (id: string, status: Tenant['status']) => {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        alert('Vous devez être connecté pour effectuer cette action')
+        alert('Token non trouvé')
         return
       }
 
-      const response = await fetch(`/api/tenants/${tenantId}`, {
+      const response = await fetch(`/api/tenants/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -363,21 +333,29 @@ export default function TenantManager() {
       })
 
       if (response.ok) {
-        const updatedTenant = await response.json()
-        setTenants(tenants.map(t => 
-          t.id === tenantId 
-            ? { ...t, status: updatedTenant.data.status }
-            : t
-        ))
-        alert(`Tenant ${status === 'active' ? 'activé' : 'suspendu'} avec succès`)
+        setTenants(prev => prev.map(t => t.id === id ? { ...t, status } : t))
+        alert(`Tenant ${status === 'active' ? 'activé' : status === 'inactive' ? 'désactivé' : 'suspendu'} avec succès`)
       } else {
-        const error = await response.json()
-        alert('Erreur lors du changement de statut: ' + error.error)
+        alert('Erreur lors de la modification du statut')
       }
     } catch (error) {
-      console.error('Erreur lors du changement de statut:', error)
+      console.error('Erreur modification statut tenant:', error)
       alert('Une erreur est survenue')
     }
+  }
+
+  const resetForm = () => {
+    setEditingTenant(null)
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      businessType: 'retail',
+      currency: 'XAF',
+      features: businessTypeFeatures.retail
+    })
+    setShowModal(false)
   }
 
   const filteredTenants = tenants.filter(tenant => {
@@ -385,14 +363,13 @@ export default function TenantManager() {
                          tenant.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || tenant.status === filterStatus
     const matchesBusinessType = filterBusinessType === 'all' || tenant.businessType === filterBusinessType
-    
     return matchesSearch && matchesStatus && matchesBusinessType
   })
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-3 text-gray-400">Chargement des tenants...</span>
       </div>
     )
@@ -435,7 +412,7 @@ export default function TenantManager() {
           </div>
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
+            onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive' | 'suspended')}
             className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="all">Tous les statuts</option>
@@ -445,7 +422,7 @@ export default function TenantManager() {
           </select>
           <select
             value={filterBusinessType}
-            onChange={(e) => setFilterBusinessType(e.target.value as any)}
+            onChange={(e) => setFilterBusinessType(e.target.value as 'all' | Tenant['businessType'])}
             className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="all">Tous les types</option>
@@ -514,17 +491,17 @@ export default function TenantManager() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-1">
-                      {tenant.features.allowsDebt && (
+                      {tenant.features?.allowsDebt && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
                           Dettes
                         </span>
                       )}
-                      {tenant.features.allowsTableService && (
+                      {tenant.features?.allowsTableService && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400">
                           Tables
                         </span>
                       )}
-                      {tenant.features.allowsDelivery && (
+                      {tenant.features?.allowsDelivery && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
                           Livraison
                         </span>
@@ -648,7 +625,7 @@ export default function TenantManager() {
                   <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                     <div>
                       <p className="text-white font-medium">Gestion des dettes clients</p>
-                      <p className="text-gray-400 text-xs">Permet d'enregistrer les dettes des clients fidèles</p>
+                      <p className="text-gray-400 text-xs">Permet d&apos;enregistrer les dettes des clients fidèles</p>
                     </div>
                     <input
                       type="checkbox"
