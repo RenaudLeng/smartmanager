@@ -26,13 +26,13 @@ interface Tenant {
   email: string
   phone: string
   address: string
-  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket'
+  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket' | 'hair_salon' | 'grocery' | 'bar_restaurant'
   currency: string
   status: 'active' | 'inactive' | 'suspended'
   createdAt: string
   lastLogin?: string
   users: number
-  features: {
+  features?: {
     allowsDebt: boolean
     allowsDelivery: boolean
     allowsTableService: boolean
@@ -57,7 +57,10 @@ const businessTypeLabels = {
   restaurant: 'Restaurant',
   bar: 'Bar',
   pharmacy: 'Pharmacie',
-  supermarket: 'Supermarché'
+  supermarket: 'Supermarché',
+  hair_salon: 'Salon de coiffure',
+  grocery: 'Épicerie',
+  bar_restaurant: 'Bar/Restaurant'
 }
 
 const businessTypeFeatures = {
@@ -99,6 +102,30 @@ const businessTypeFeatures = {
     allowsTableService: false,
     requiresTableNumber: false,
     allowsFlashCustomers: false,
+    allowsTicketPrinting: true
+  },
+  hair_salon: {
+    allowsDebt: true,
+    allowsDelivery: false,
+    allowsTableService: false,
+    requiresTableNumber: false,
+    allowsFlashCustomers: true,
+    allowsTicketPrinting: true
+  },
+  grocery: {
+    allowsDebt: false,
+    allowsDelivery: false,
+    allowsTableService: false,
+    requiresTableNumber: false,
+    allowsFlashCustomers: false,
+    allowsTicketPrinting: true
+  },
+  bar_restaurant: {
+    allowsDebt: true,
+    allowsDelivery: true,
+    allowsTableService: true,
+    requiresTableNumber: true,
+    allowsFlashCustomers: true,
     allowsTicketPrinting: true
   }
 }

@@ -16,6 +16,7 @@ model Tenant {
   businessType      String   // bar, restaurant, grocery, hair_salon, etc.
   currency          String   @default("XAF")
   status            String   @default("active") // active, inactive, suspended
+  features          String?  // Configuration dynamique JSON en string
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   deletedAt         DateTime?

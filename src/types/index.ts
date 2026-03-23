@@ -16,11 +16,19 @@ export interface Tenant {
   email: string
   phone?: string
   address?: string
-  businessType: 'bar' | 'restaurant' | 'grocery' | 'hair_salon' | 'bar_restaurant'
+  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket' | 'hair_salon' | 'grocery' | 'bar_restaurant'
   currency: string
   status: 'active' | 'inactive' | 'suspended'
   createdAt: Date
   updatedAt: Date
+  features?: {
+    allowsDebt: boolean
+    allowsDelivery: boolean
+    allowsTableService: boolean
+    requiresTableNumber: boolean
+    allowsFlashCustomers: boolean
+    allowsTicketPrinting: boolean
+  }
 }
 
 export interface Product {
@@ -213,20 +221,20 @@ export interface BusinessTypeConfig {
 }
 
 export const BUSINESS_TYPES_CONFIG: Record<string, BusinessTypeConfig> = {
-  bar: {
+  retail: {
     categories: [
-      { name: 'Bières', description: 'Différentes marques de bières' },
-      { name: 'Vins', description: 'Vins rouges, blancs, rosés' },
-      { name: 'Spirits', description: 'Whisky, vodka, rhum, etc.' },
-      { name: 'Softs', description: 'Boissons non alcoolisées' },
-      { name: 'Snacks', description: 'Chips, biscuits, etc.' }
+      { name: 'Vêtements', description: 'Vêtements pour hommes, femmes, enfants' },
+      { name: 'Accessoires', description: 'Sacs, chaussures, bijoux' },
+      { name: 'Électronique', description: 'Appareils électroniques divers' },
+      { name: 'Maison', description: 'Articles pour la maison' },
+      { name: 'Beauté', description: 'Produits de beauté et soins' }
     ],
     defaultProducts: [
-      { name: 'Castel 33cl', price: 500, category: 'Bières' },
-      { name: 'Coca-Cola 33cl', price: 300, category: 'Softs' },
-      { name: 'Chips', price: 200, category: 'Snacks' }
+      { name: 'T-shirt', price: 5000, category: 'Vêtements' },
+      { name: 'Sac à main', price: 10000, category: 'Accessoires' },
+      { name: 'Chargeur USB', price: 2500, category: 'Électronique' }
     ],
-    defaultExpenses: ['electricity', 'rent', 'salaries', 'purchases']
+    defaultExpenses: ['electricity', 'rent', 'salaries', 'purchases', 'transport']
   },
   restaurant: {
     categories: [
@@ -242,6 +250,51 @@ export const BUSINESS_TYPES_CONFIG: Record<string, BusinessTypeConfig> = {
       { name: 'Salade', price: 800, category: 'Entrées' }
     ],
     defaultExpenses: ['electricity', 'water', 'rent', 'salaries', 'purchases']
+  },
+  bar: {
+    categories: [
+      { name: 'Bières', description: 'Différentes marques de bières' },
+      { name: 'Vins', description: 'Vins rouges, blancs, rosés' },
+      { name: 'Spirits', description: 'Whisky, vodka, rhum, etc.' },
+      { name: 'Softs', description: 'Boissons non alcoolisées' },
+      { name: 'Snacks', description: 'Chips, biscuits, etc.' }
+    ],
+    defaultProducts: [
+      { name: 'Castel 33cl', price: 500, category: 'Bières' },
+      { name: 'Coca-Cola 33cl', price: 300, category: 'Softs' },
+      { name: 'Chips', price: 200, category: 'Snacks' }
+    ],
+    defaultExpenses: ['electricity', 'rent', 'salaries', 'purchases']
+  },
+  pharmacy: {
+    categories: [
+      { name: 'Médicaments', description: 'Médicaments sans ordonnance' },
+      { name: 'Produits hygiène', description: 'Produits d\'hygiène personnelle' },
+      { name: 'Accessoires médicaux', description: 'Thermomètres, tensiomètres' },
+      { name: 'Vitamines', description: 'Compléments alimentaires' },
+      { name: 'Soins bébé', description: 'Produits pour bébés' }
+    ],
+    defaultProducts: [
+      { name: 'Paracétamol', price: 500, category: 'Médicaments' },
+      { name: 'Gel hydroalcoolique', price: 1500, category: 'Produits hygiène' },
+      { name: 'Vitamine C', price: 2000, category: 'Vitamines' }
+    ],
+    defaultExpenses: ['electricity', 'water', 'rent', 'salaries', 'purchases', 'security']
+  },
+  supermarket: {
+    categories: [
+      { name: 'Produits frais', description: 'Légumes, fruits, viandes' },
+      { name: 'Épicerie', description: 'Pâtes, riz, conserves' },
+      { name: 'Boissons', description: 'Jus, sodas, eau' },
+      { name: 'Produits laitiers', description: 'Lait, yaourts, fromages' },
+      { name: 'Boulangerie', description: 'Pain, viennoiseries' }
+    ],
+    defaultProducts: [
+      { name: 'Pain 500g', price: 500, category: 'Boulangerie' },
+      { name: 'Lait 1L', price: 800, category: 'Produits laitiers' },
+      { name: 'Riz 1kg', price: 1000, category: 'Épicerie' }
+    ],
+    defaultExpenses: ['electricity', 'water', 'rent', 'salaries', 'purchases', 'transport', 'security']
   },
   grocery: {
     categories: [
