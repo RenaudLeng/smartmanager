@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Search, Edit2, Trash2, ShoppingCart, Truck, Calendar, Edit, Grid, List, Users, Clock, CheckCircle } from 'lucide-react'
-import { useTenant } from '@/contexts/TenantContext'
+import { useTenant } from '../../../contexts/TenantContext'
 
 interface Order {
   id: string

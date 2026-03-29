@@ -38,9 +38,9 @@ import {
   UserCheck,
   AlertCircle
 } from 'lucide-react'
-import { useTenant } from '@/contexts/TenantContext'
-import { useAuth } from '@/contexts/AuthContext'
-import SmartAlerts from '@/components/Notifications/SmartAlerts'
+import { useTenant } from '../../../contexts/TenantContext'
+import { useAuth } from '../../../contexts/AuthContext'
+import SmartAlerts from '../../../components/Notifications/SmartAlerts'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface DashboardStats {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Search, Users, Grid, List, Mail, Phone, ArrowLeft } from 'lucide-react'
-import { useTenant } from '@/contexts/TenantContext'
+import { useTenant } from '../../../contexts/TenantContext'
 
 interface Customer {
   id: string
