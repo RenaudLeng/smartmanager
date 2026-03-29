@@ -6,7 +6,7 @@ import {
   BarChart3, TrendingUp, DollarSign, ShoppingCart, 
   ArrowLeft, Download
 } from 'lucide-react'
-import { useNotifications } from '@/components/ui/ConfirmDialog'
+import { useNotifications } from '../../../components/ui/ConfirmDialog'
 
 interface ReportData {
   totalRevenue: number

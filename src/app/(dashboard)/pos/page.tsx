@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { ShoppingCart, Plus, Minus, Trash2, Search, Package, CreditCard, Smartphone, Receipt, History, CheckCircle, X, Grid, List, Camera } from 'lucide-react'
-import { useTenant } from '@/contexts/TenantContext'
-import { bluetoothPrintService } from '@/services/BluetoothPrintService'
-import { ScannerModal } from '@/components/ScannerModal'
+import { useTenant } from '../../../contexts/TenantContext'
+import { bluetoothPrintService } from '../../../services/BluetoothPrintService'
+import { ScannerModal } from '../../../components/ScannerModal'
 import { Result } from '@zxing/library'
 
 interface Product {

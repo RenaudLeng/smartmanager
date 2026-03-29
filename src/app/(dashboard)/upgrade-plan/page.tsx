@@ -9,9 +9,9 @@ import {
   Sparkles, 
   Star
 } from 'lucide-react'
-import { useTenant } from '@/contexts/TenantContext'
-import { useAuth } from '@/contexts/AuthContext'
-import { useNotifications } from '@/components/ui/Notification'
+import { useTenant } from '../../../contexts/TenantContext'
+import { useAuth } from '../../../contexts/AuthContext'
+import { useNotifications } from '../../../components/ui/Notification'
 
 interface Plan {
   id: string

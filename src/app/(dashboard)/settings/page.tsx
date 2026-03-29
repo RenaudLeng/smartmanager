@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { 
   User, Store, Bell, Shield, Palette, Smartphone, Save, Eye, EyeOff, Moon, Sun, Mail, ArrowLeft, Users, Key, Lock, Plus, Edit2, Trash2, X 
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '../../../contexts/AuthContext'
 
 interface AppUser {
   id: string
