@@ -5,13 +5,6 @@ const nextConfig = {
   },
   // Configuration pour résoudre les problèmes de fallback
   trailingSlash: false,
-  // Configuration PostCSS explicite
-  postcss: {
-    plugins: {
-      '@tailwindcss/postcss': {},
-      autoprefixer: {},
-    },
-  },
   // Configuration minimaliste - PAS de experimental, PAS de webpack custom
   async headers() {
     return [
