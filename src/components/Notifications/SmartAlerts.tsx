@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface StockAlert {
   id: string
@@ -32,6 +33,7 @@ interface Config {
 }
 
 export default function SmartAlerts() {
+  const { token } = useAuth()
   const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([])
   const [salesData, setSalesData] = useState<SalesData>({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
   const [expenseData, setExpenseData] = useState<ExpenseData>({ daily: 0, weekly: 0, monthly: 0, total: 0 })
@@ -43,10 +45,8 @@ export default function SmartAlerts() {
     lowStockThreshold: 10
   })
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
-      
       if (!token) {
         console.log('Pas de token trouvé, utilisation de données par défaut')
         setStockAlerts([])
@@ -102,16 +102,18 @@ export default function SmartAlerts() {
       }
       
       // Charger la configuration du tableau de bord
-      let configResponseData = { data: { dailyObjective: 100000, dailyExpenseLimit: 50000, minProfitMargin: 15, lowStockThreshold: 10 } }
+      let configResponseData = { data: null }
       try {
         const configResponse = await fetch('/api/dashboard/config', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (configResponse.ok) {
           configResponseData = await configResponse.json()
+        } else {
+          console.warn('Impossible de charger la configuration, statut:', configResponse.status)
         }
       } catch (error) {
-        console.warn('Erreur lors du chargement de la configuration:', error)
+        console.warn('Erreur réseau lors du chargement de la configuration:', error)
       }
       
       // Traiter les données
@@ -169,14 +171,11 @@ export default function SmartAlerts() {
       setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
       setProfitMargin(0)
     }
-  }
+  }, [token])
 
   useEffect(() => {
-    const loadDataAsync = async () => {
-      await loadData()
-    }
-    loadDataAsync()
-  }, [])
+    loadData()
+  }, [token])
 
   const criticalStockAlerts = stockAlerts.filter(alert => alert.status === 'RUPTURE')
   const lowStockAlerts = stockAlerts.filter(alert => alert.status === 'CRITIQUE')

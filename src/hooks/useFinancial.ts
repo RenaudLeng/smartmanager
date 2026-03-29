@@ -20,14 +20,20 @@ export function useFinancial(): UseFinancialReturn {
     error: null
   })
 
-  // Load data from API
+  // Load data from API - avec optimisation pour éviter les appels répétés
   useEffect(() => {
+    let isMounted = true
+    
     async function loadData() {
+      // Éviter les appels multiples
+      if (state.loading && !state.error) return
+      
       try {
         // Vérifier si les données ont été réinitialisées
         const isReset = localStorage.getItem('smartmanager-reset')
         if (isReset === 'true') {
           console.log('Données réinitialisées - utilisation de données vides')
+          if (!isMounted) return
           setState({
             budgetLines: [],
             transactions: [],
@@ -41,6 +47,11 @@ export function useFinancial(): UseFinancialReturn {
         }
         
         const token = localStorage.getItem('token')
+        if (!token) {
+          if (!isMounted) return
+          setState(prev => ({ ...prev, loading: false, error: 'Token non trouvé' }))
+          return
+        }
         
         // Load budget lines
         const budgetResponse = await fetch('/api/financial/budget-lines', {
@@ -57,6 +68,8 @@ export function useFinancial(): UseFinancialReturn {
           headers: { 'Authorization': `Bearer ${token}` }
         })
 
+        if (!isMounted) return
+
         const [budgetData, transactionsData, metricsData] = await Promise.all([
           budgetResponse.json(),
           transactionsResponse.json(),
@@ -72,6 +85,7 @@ export function useFinancial(): UseFinancialReturn {
           error: null
         })
       } catch (error) {
+        if (!isMounted) return
         console.error('Erreur lors du chargement des données financières:', error)
         setState(prev => ({
           ...prev,
@@ -82,7 +96,11 @@ export function useFinancial(): UseFinancialReturn {
     }
 
     loadData()
-  }, [])
+    
+    return () => {
+      isMounted = false
+    }
+  }, []) // Exécuté une seule fois au montage
 
   // Calcul des métriques financières
   const calculateMetrics = useCallback((
@@ -332,7 +350,7 @@ export function useFinancial(): UseFinancialReturn {
       console.error('Erreur lors de la génération du rapport:', error)
       setState(prev => ({ ...prev, error: 'Erreur lors de la génération du rapport' }))
     }
-  }, [state.transactions, state.budgetLines, calculateMetrics])
+  }, [state.transactions, state.budgetLines]) // Supprimé calculateMetrics pour éviter la boucle
 
   const getBudgetLineById = useCallback((id: string): BudgetLine | undefined => {
     return state.budgetLines.find(line => line.id === id)

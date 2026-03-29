@@ -85,7 +85,7 @@ export default function POSPage() {
     }
     
     loadProducts()
-  }, [])
+  }, []) // Exécuté une seule fois au montage
   
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -97,19 +97,18 @@ export default function POSPage() {
   const [currentSale, setCurrentSale] = useState<Sale | null>(null)
   const [salesHistory, setSalesHistory] = useState<Sale[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [notificationIdCounter, setNotificationIdCounter] = useState(0)
   const [showScanner, setShowScanner] = useState(false)  // 🔥 NOUVEAU : État du scanner
   
   // États pour le processus de paiement
   const [customerAmount, setCustomerAmount] = useState<string>('')
   const [paymentStep, setPaymentStep] = useState<'method' | 'amount' | 'confirm'>('method')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
 
   // Notification system
   const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string, duration = 3000) => {
-    const id = `notification-${notificationIdCounter + 1}`
-    setNotificationIdCounter(prev => prev + 1)
+    const id = `notification-${Date.now()}`
     setNotifications(prev => [...prev, { id, type, message, duration }])
-  }, [notificationIdCounter, setNotificationIdCounter, setNotifications])
+  }, [setNotifications])
 
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id))

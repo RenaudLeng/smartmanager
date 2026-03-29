@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -28,31 +29,36 @@ const updateUserSchema = z.object({
 // GET /api/users - Lister les utilisateurs
 export async function GET(request: NextRequest) {
   try {
-    const { tenantId, role, status, search } = Object.fromEntries(request.nextUrl.searchParams)
+    // Extraire les paramètres de l'URL
+    const url = new URL(request.url)
+    const tenantId = url.searchParams.get('tenantId')
+    const role = url.searchParams.get('role')
+    const status = url.searchParams.get('status')
+    const search = url.searchParams.get('search')
 
-    const where: any = {}
+    const whereClause: Record<string, unknown> = {}
 
     if (tenantId) {
-      where.tenantId = tenantId
+      whereClause.tenantId = tenantId
     }
 
     if (role && role !== 'all') {
-      where.role = role
+      whereClause.role = role
     }
 
     if (status && status !== 'all') {
-      where.isActive = status === 'active'
+      whereClause.isActive = status === 'active'
     }
 
     if (search) {
-      where.OR = [
+      whereClause.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } }
       ]
     }
 
     const users = await prisma.user.findMany({
-      where,
+      where: whereClause,
       include: {
         tenant: {
           select: {
@@ -102,7 +108,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Hasher le mot de passe
-    const bcrypt = require('bcryptjs')
     const hashedPassword = await bcrypt.hash(validatedData.password, 10)
 
     // Créer l'utilisateur
@@ -145,15 +150,14 @@ export async function PUT(
     const validatedData = updateUserSchema.parse(body)
 
     // Si mot de passe fourni, le hasher
-    let updateData: any = { ...validatedData }
+    const updateData: Record<string, unknown> = { ...validatedData }
     if (validatedData.password) {
-      const bcrypt = require('bcryptjs')
-      updateData.password = await bcrypt.hash(validatedData.password, 10)
+      updateData.password = await bcrypt.hash(validatedData.password, 12)
     }
 
     const user = await prisma.user.update({
       where: { id },
-      data: updateData
+      data: updateData,
     })
 
     return NextResponse.json({
@@ -182,7 +186,8 @@ export async function DELETE(
 ) {
   try {
     const id = params.id
-
+    console.log('Tentative de suppression utilisateur avec ID:', id)
+    
     await prisma.user.delete({
       where: { id }
     })
@@ -207,13 +212,32 @@ export async function POST_SUSPEND(
 ) {
   try {
     const id = params.id
-    const { reason } = await request.json()
+    const { reason } = await request.json() // Utilisé pour l'audit mais non traité
 
     const user = await prisma.user.update({
       where: { id },
       data: { 
         isActive: false,
         updatedAt: new Date()
+      }
+    })
+
+    // Créer un log d'audit pour cette action
+    await prisma.auditLog.create({
+      data: {
+        action: 'suspend',
+        entity: 'user',
+        entityId: id,
+        userId: user.id, // Utiliser l'ID de l'utilisateur suspendu
+        tenantId: user.tenantId || null, // Gérer le cas où l'utilisateur n'a pas de tenant
+        details: JSON.stringify({
+          userName: user.name,
+          userEmail: user.email,
+          userRole: user.role,
+          reason: reason // Utiliser la raison fournie
+        }),
+        ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
+        userAgent: request.headers.get('user-agent') || undefined
       }
     })
 

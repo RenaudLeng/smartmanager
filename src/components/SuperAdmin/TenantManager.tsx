@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { 
-  Store, 
-  Plus, 
   Edit2, 
   Trash2, 
   Shield, 
@@ -11,10 +9,18 @@ import {
   XCircle, 
   AlertTriangle,
   Users,
-  Save,
-  X,
-  Search
+  Search,
+  CreditCard,
+  Truck,
+  Table,
+  Users2,
+  Zap,
+  Printer,
+  Eye
 } from 'lucide-react'
+import { ToastNotification, useToastNotification } from '@/components/ui/ToastNotification'
+import { TenantModal } from './TenantModal'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface Tenant {
   id: string
@@ -25,6 +31,7 @@ interface Tenant {
   businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket' | 'hair_salon' | 'grocery' | 'bar_restaurant'
   currency: string
   status: 'active' | 'inactive' | 'suspended'
+  subscriptionPlan: 'free' | 'trial' | 'premium' | 'enterprise'
   createdAt: string
   lastLogin?: string
   users: number
@@ -38,18 +45,8 @@ interface Tenant {
   }
 }
 
-interface TenantFormData {
-  name: string
-  email: string
-  phone: string
-  address: string
-  businessType: Tenant['businessType']
-  currency: string
-  features: Tenant['features']
-}
-
 const businessTypeLabels = {
-  retail: 'Boutique',
+  retail: 'Vente de produits et services',
   restaurant: 'Restaurant',
   bar: 'Bar',
   pharmacy: 'Pharmacie',
@@ -59,114 +56,112 @@ const businessTypeLabels = {
   bar_restaurant: 'Bar/Restaurant'
 }
 
-const businessTypeFeatures = {
-  retail: {
-    allowsDebt: false,
-    allowsDelivery: false,
-    allowsTableService: false,
-    requiresTableNumber: false,
-    allowsFlashCustomers: false,
-    allowsTicketPrinting: true
-  },
-  restaurant: {
-    allowsDebt: true,
-    allowsDelivery: true,
-    allowsTableService: true,
-    requiresTableNumber: true,
-    allowsFlashCustomers: true,
-    allowsTicketPrinting: true
-  },
-  bar: {
-    allowsDebt: true,
-    allowsDelivery: false,
-    allowsTableService: false,
-    requiresTableNumber: false,
-    allowsFlashCustomers: true,
-    allowsTicketPrinting: true
-  },
-  pharmacy: {
-    allowsDebt: false,
-    allowsDelivery: true,
-    allowsTableService: false,
-    requiresTableNumber: false,
-    allowsFlashCustomers: false,
-    allowsTicketPrinting: true
-  },
-  supermarket: {
-    allowsDebt: false,
-    allowsDelivery: true,
-    allowsTableService: false,
-    requiresTableNumber: false,
-    allowsFlashCustomers: false,
-    allowsTicketPrinting: true
-  },
-  hair_salon: {
-    allowsDebt: true,
-    allowsDelivery: false,
-    allowsTableService: false,
-    requiresTableNumber: false,
-    allowsFlashCustomers: true,
-    allowsTicketPrinting: true
-  },
-  grocery: {
-    allowsDebt: false,
-    allowsDelivery: false,
-    allowsTableService: false,
-    requiresTableNumber: false,
-    allowsFlashCustomers: false,
-    allowsTicketPrinting: true
-  },
-  bar_restaurant: {
-    allowsDebt: true,
-    allowsDelivery: true,
-    allowsTableService: true,
-    requiresTableNumber: true,
-    allowsFlashCustomers: true,
-    allowsTicketPrinting: true
+const getDefaultFeatures = (businessType: string) => {
+  const defaultFeatures = {
+    retail: {
+      allowsDebt: false,
+      allowsDelivery: true,
+      allowsTableService: false,
+      requiresTableNumber: false,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    restaurant: {
+      allowsDebt: true,
+      allowsDelivery: true,
+      allowsTableService: true,
+      requiresTableNumber: true,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    bar: {
+      allowsDebt: true,
+      allowsDelivery: false,
+      allowsTableService: true,
+      requiresTableNumber: false,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    pharmacy: {
+      allowsDebt: false,
+      allowsDelivery: true,
+      allowsTableService: false,
+      requiresTableNumber: false,
+      allowsFlashCustomers: false,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    supermarket: {
+      allowsDebt: true,
+      allowsDelivery: true,
+      allowsTableService: false,
+      requiresTableNumber: false,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    hair_salon: {
+      allowsDebt: false,
+      allowsDelivery: false,
+      allowsTableService: true,
+      requiresTableNumber: true,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    grocery: {
+      allowsDebt: false,
+      allowsDelivery: true,
+      allowsTableService: false,
+      requiresTableNumber: false,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    },
+    bar_restaurant: {
+      allowsDebt: true,
+      allowsDelivery: true,
+      allowsTableService: true,
+      requiresTableNumber: true,
+      allowsFlashCustomers: true,
+      allowsTicketPrinting: true,
+      subscriptionPlan: 'free'
+    }
   }
+  
+  return defaultFeatures[businessType as keyof typeof defaultFeatures] || defaultFeatures.retail
 }
 
-export default function TenantManager() {
+export default function TenantManager({ tenants: tenantsFromProps }: { tenants?: Tenant[] } = {}) {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'suspended'>('all')
   const [filterBusinessType, setFilterBusinessType] = useState<'all' | Tenant['businessType']>('all')
+  const { notifications, success, error: showError, warning, info, removeNotification } = useToastNotification()
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
+  const [modalMode, setModalMode] = useState<'view' | 'edit'>('view')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+  const [tenantToDelete, setTenantToDelete] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<TenantFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    businessType: 'retail',
-    currency: 'XAF',
-    features: businessTypeFeatures.retail
-  })
-
-  // Charger les vrais tenants depuis l'API
   const loadTenants = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        console.warn('Token non trouvé, utilisation des données locales')
-        setLoading(false)
-        return
-      }
-
+      // Temporairement sans authentification pour tester
       const response = await fetch('/api/tenants', {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
 
       if (response.ok) {
         const data = await response.json()
+        console.log('Données reçues:', data)
         if (data.success && data.data) {
-          // Transformer les données de l'API pour correspondre à l'interface
-          const transformedTenants = data.data.map((tenant: {
+          const transformedTenants: Tenant[] = data.data.map((tenant: {
             id: string;
             name: string;
             email: string;
@@ -175,31 +170,45 @@ export default function TenantManager() {
             businessType: string;
             currency: string;
             status: string;
+            subscriptionPlan?: string;
             createdAt: string;
             lastLogin?: string;
-            _count: { users: number };
             features?: string;
-          }) => ({
-            id: tenant.id,
-            name: tenant.name,
-            email: tenant.email,
-            phone: tenant.phone || '',
-            address: tenant.address || '',
-            businessType: tenant.businessType as Tenant['businessType'],
-            currency: tenant.currency,
-            status: tenant.status as Tenant['status'],
-            createdAt: tenant.createdAt,
-            lastLogin: tenant.lastLogin,
-            users: tenant._count.users,
-            features: tenant.features ? JSON.parse(tenant.features) : undefined
-          }))
+            _count: {
+              users: number;
+            };
+          }) => {
+            let features = tenant.features ? JSON.parse(tenant.features) : {}
+            
+            // Si pas de fonctionnalités définies, utiliser les fonctionnalités par défaut selon le type d'activité
+            if (!features || Object.keys(features).length === 0) {
+              features = getDefaultFeatures(tenant.businessType)
+            }
+            
+            return {
+              id: tenant.id,
+              name: tenant.name,
+              email: tenant.email,
+              phone: tenant.phone || '',
+              address: tenant.address || '',
+              businessType: tenant.businessType as Tenant['businessType'],
+              currency: tenant.currency,
+              status: tenant.status as Tenant['status'],
+              subscriptionPlan: (tenant.subscriptionPlan as Tenant['subscriptionPlan']) || 'trial',
+              createdAt: tenant.createdAt,
+              lastLogin: tenant.lastLogin,
+              users: tenant._count.users,
+              features
+            }
+          })
           setTenants(transformedTenants)
+          console.log('Tenants transformés:', transformedTenants)
         }
       } else {
-        console.warn('Erreur lors du chargement des tenants:', response.statusText)
+        console.error('Erreur API:', response.status, response.statusText)
       }
     } catch (error) {
-      console.error('Erreur chargement tenants:', error)
+      console.error('Erreur loadTenants:', error)
     } finally {
       setLoading(false)
     }
@@ -209,124 +218,63 @@ export default function TenantManager() {
     loadTenants()
   }, [])
 
-  const handleBusinessTypeChange = (businessType: Tenant['businessType']) => {
-    setFormData(prev => ({
-      ...prev,
-      businessType,
-      features: businessTypeFeatures[businessType]
-    }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        alert('Token non trouvé')
-        return
-      }
-
-      const response = await fetch('/api/tenants', {
-        method: editingTenant ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) {
-          if (editingTenant) {
-            setTenants(prev => prev.map(t => t.id === editingTenant.id ? { ...t, ...formData } : t))
-            alert('Tenant mis à jour avec succès')
-          } else {
-            setTenants(prev => [...prev, result.data])
-            alert('Tenant créé avec succès')
-          }
-          setShowModal(false)
-          setEditingTenant(null)
-          setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            address: '',
-            businessType: 'retail',
-            currency: 'XAF',
-            features: businessTypeFeatures.retail
-          })
-          loadTenants()
-        } else {
-          alert('Erreur: ' + (result.error || 'Erreur inconnue'))
-        }
-      } else {
-        alert('Erreur lors de la requête')
-      }
-    } catch (error) {
-      console.error('Erreur création tenant:', error)
-      alert('Une erreur est survenue')
-    }
-  }
-
-  const handleEdit = (tenant: Tenant) => {
-    setEditingTenant(tenant)
-    setFormData({
-      name: tenant.name,
-      email: tenant.email,
-      phone: tenant.phone,
-      address: tenant.address,
-      businessType: tenant.businessType,
-      currency: tenant.currency,
-      features: tenant.features || businessTypeFeatures[tenant.businessType]
-    })
-    setShowModal(true)
-  }
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce tenant ?')) {
-      return
-    }
+    setTenantToDelete(id)
+    setIsConfirmModalOpen(true)
+  }
 
+  const confirmDelete = async () => {
+    if (!tenantToDelete) return
+    
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        alert('Token non trouvé')
-        return
-      }
-
-      const response = await fetch(`/api/tenants/${id}`, {
+      const response = await fetch(`/api/tenants/${tenantToDelete}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
 
       if (response.ok) {
-        setTenants(prev => prev.filter(t => t.id !== id))
-        alert('Tenant supprimé avec succès')
+        setTenants(prev => prev.filter(t => t.id !== tenantToDelete))
+        success('Suppression réussie', 'Le tenant a été supprimé avec succès')
       } else {
-        alert('Erreur lors de la suppression')
+        showError('Erreur de suppression', 'Impossible de supprimer le tenant')
       }
     } catch (error) {
-      console.error('Erreur suppression tenant:', error)
-      alert('Une erreur est survenue')
+      console.error('❌ Erreur suppression tenant:', error)
+      showError('Erreur', 'Une erreur est survenue lors de la suppression')
+    } finally {
+      setIsConfirmModalOpen(false)
+      setTenantToDelete(null)
+    }
+  }
+
+  const handleAction = async (action: string, tenant: Tenant) => {
+    switch (action) {
+      case 'view':
+        setSelectedTenant(tenant)
+        setModalMode('view')
+        setIsModalOpen(true)
+        break
+      case 'edit':
+        setSelectedTenant(tenant)
+        setModalMode('edit')
+        setIsModalOpen(true)
+        break
+      case 'toggleStatus':
+        await handleStatusChange(tenant.id, tenant.status === 'active' ? 'suspended' : 'active')
+        break
+      case 'delete':
+        await handleDelete(tenant.id)
+        break
     }
   }
 
   const handleStatusChange = async (id: string, status: Tenant['status']) => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        alert('Token non trouvé')
-        return
-      }
-
       const response = await fetch(`/api/tenants/${id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status })
@@ -334,28 +282,16 @@ export default function TenantManager() {
 
       if (response.ok) {
         setTenants(prev => prev.map(t => t.id === id ? { ...t, status } : t))
-        alert(`Tenant ${status === 'active' ? 'activé' : status === 'inactive' ? 'désactivé' : 'suspendu'} avec succès`)
+        // Message de succès plus moderne
+        const action = status === 'active' ? 'activé' : status === 'inactive' ? 'désactivé' : 'suspendu'
+        success('Statut modifié', `Tenant ${action} avec succès`)
       } else {
-        alert('Erreur lors de la modification du statut')
+        showError('Erreur', 'Impossible de modifier le statut du tenant')
       }
     } catch (error) {
-      console.error('Erreur modification statut tenant:', error)
-      alert('Une erreur est survenue')
+      console.error('❌ Erreur modification statut tenant:', error)
+      showError('Erreur', 'Une erreur est survenue lors de la modification du statut')
     }
-  }
-
-  const resetForm = () => {
-    setEditingTenant(null)
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      businessType: 'retail',
-      currency: 'XAF',
-      features: businessTypeFeatures.retail
-    })
-    setShowModal(false)
   }
 
   const filteredTenants = tenants.filter(tenant => {
@@ -377,24 +313,40 @@ export default function TenantManager() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notifications */}
+      <ToastNotification notifications={notifications} onRemove={removeNotification} />
+      
+      {/* Tenant Modal */}
+      <TenantModal
+        tenant={selectedTenant}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        mode={modalMode}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Supprimer le tenant"
+        message="Êtes-vous sûr de vouloir supprimer ce tenant ? Cette action est irréversible."
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        type="danger"
+      />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white flex items-center">
-            <Store className="h-5 w-5 mr-2 text-orange-400" />
-            Gestion des Tenants
-          </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-white">Gestion des Tenants</h1>
+          <p className="text-gray-400 mt-1">
             {tenants.length} tenant(s) • {tenants.filter(t => t.status === 'active').length} actif(s)
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Ajouter un Tenant</span>
-        </button>
+        <div className="text-sm text-orange-400">
+          Validation des abonnements
+        </div>
       </div>
 
       {/* Filters */}
@@ -426,7 +378,7 @@ export default function TenantManager() {
             className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="all">Tous les types</option>
-            <option value="retail">Boutique</option>
+            <option value="retail">Vente de produits et services</option>
             <option value="restaurant">Restaurant</option>
             <option value="bar">Bar</option>
             <option value="pharmacy">Pharmacie</option>
@@ -444,6 +396,7 @@ export default function TenantManager() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tenant</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Statut</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Abonnement</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Utilisateurs</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Fonctionnalités</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
@@ -484,6 +437,21 @@ export default function TenantManager() {
                     </div>
                   </td>
                   <td className="px-4 py-4">
+                    <div className="flex items-center space-x-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        tenant.subscriptionPlan === 'trial' ? 'bg-green-500/20 text-green-400' :
+                        tenant.subscriptionPlan === 'premium' ? 'bg-purple-500/20 text-purple-400' :
+                        tenant.subscriptionPlan === 'enterprise' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {tenant.subscriptionPlan === 'trial' ? 'Essai' :
+                         tenant.subscriptionPlan === 'premium' ? 'Premium' :
+                         tenant.subscriptionPlan === 'enterprise' ? 'Enterprise' :
+                         'Gratuit'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
                     <div className="flex items-center text-sm text-gray-400">
                       <Users className="h-4 w-4 mr-1" />
                       {tenant.users}
@@ -496,40 +464,60 @@ export default function TenantManager() {
                           Dettes
                         </span>
                       )}
-                      {tenant.features?.allowsTableService && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400">
-                          Tables
-                        </span>
-                      )}
                       {tenant.features?.allowsDelivery && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
                           Livraison
                         </span>
                       )}
+                      {tenant.features?.allowsTableService && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400">
+                          Tables
+                        </span>
+                      )}
+                      {tenant.features?.requiresTableNumber && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400">
+                          N° Tables
+                        </span>
+                      )}
+                      {tenant.features?.allowsFlashCustomers && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400">
+                          Flash
+                        </span>
+                      )}
+                      {tenant.features?.allowsTicketPrinting && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
+                          Tickets
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4">
+                    {/* Actions buttons */}
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => handleEdit(tenant)}
-                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                        onClick={() => handleAction('view', tenant)}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                        title="Voir les détails"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleAction('edit', tenant)}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
                         title="Modifier"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleStatusChange(
-                          tenant.id, 
-                          tenant.status === 'active' ? 'suspended' : 'active'
-                        )}
-                        className="text-yellow-400 hover:text-yellow-300 transition-colors"
+                        onClick={() => handleAction('toggleStatus', tenant)}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
                         title={tenant.status === 'active' ? 'Suspendre' : 'Activer'}
                       >
                         <Shield className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(tenant.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
+                        onClick={() => handleAction('delete', tenant)}
+                        className="p-1 text-red-400 hover:text-red-300 hover:bg-gray-700 rounded transition-colors"
                         title="Supprimer"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -542,182 +530,6 @@ export default function TenantManager() {
           </table>
         </div>
       </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 backdrop-blur-md border border-white/20 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">
-                {editingTenant ? 'Modifier le Tenant' : 'Ajouter un Tenant'}
-              </h3>
-              <button
-                onClick={resetForm}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Informations de base */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Nom du tenant</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Type de commerce</label>
-                  <select
-                    value={formData.businessType}
-                    onChange={(e) => handleBusinessTypeChange(e.target.value as Tenant['businessType'])}
-                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option value="retail">Boutique</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="bar">Bar</option>
-                    <option value="pharmacy">Pharmacie</option>
-                    <option value="supermarket">Supermarché</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Adresse</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="w-full px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              {/* Fonctionnalités */}
-              <div>
-                <h4 className="text-lg font-medium text-white mb-4">Fonctionnalités activées</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">Gestion des dettes clients</p>
-                      <p className="text-gray-400 text-xs">Permet d&apos;enregistrer les dettes des clients fidèles</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.features.allowsDebt}
-                      onChange={() => handleFeatureToggle('allowsDebt')}
-                      className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">Service de livraison</p>
-                      <p className="text-gray-400 text-xs">Gestion des livraisons à domicile</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.features.allowsDelivery}
-                      onChange={() => handleFeatureToggle('allowsDelivery')}
-                      className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">Service de table</p>
-                      <p className="text-gray-400 text-xs">Gestion des tables et service restaurant</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.features.allowsTableService}
-                      onChange={() => handleFeatureToggle('allowsTableService')}
-                      className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">Numéro de table requis</p>
-                      <p className="text-gray-400 text-xs">Oblige le numéro de table pour chaque commande</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.features.requiresTableNumber}
-                      onChange={() => handleFeatureToggle('requiresTableNumber')}
-                      className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">Clients flash</p>
-                      <p className="text-gray-400 text-xs">Système de crédit pour clients réguliers</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.features.allowsFlashCustomers}
-                      onChange={() => handleFeatureToggle('allowsFlashCustomers')}
-                      className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">Impression tickets</p>
-                      <p className="text-gray-400 text-xs">Impression automatique des tickets de caisse</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.features.allowsTicketPrinting}
-                      onChange={() => handleFeatureToggle('allowsTicketPrinting')}
-                      className="w-5 h-5 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>{editingTenant ? 'Mettre à jour' : 'Créer'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

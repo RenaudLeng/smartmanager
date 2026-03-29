@@ -1,9 +1,28 @@
+'use client'
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 interface Tenant {
   id: string
   name: string
-  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket'
+  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket' | 'hair_salon' | 'grocery' | 'bar_restaurant'
+  email: string
+  phone?: string
+  address?: string
+  currency: string
+  status: 'active' | 'inactive' | 'suspended'
+  subscriptionPlan: 'free' | 'trial' | 'premium' | 'enterprise'
+  trialEndDate?: Date
+  features: {
+    allowsDebt: boolean
+    allowsDelivery: boolean
+    allowsTableService: boolean
+    requiresTableNumber: boolean
+    allowsFlashCustomers: boolean
+    allowsTicketPrinting: boolean
+  }
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface User {
@@ -41,8 +60,15 @@ interface TenantContextType {
     allowsFlashCustomers: boolean
     allowsTicketPrinting: boolean
   }
+  getSubscriptionStatus: () => {
+    plan: string
+    isTrial: boolean
+    trialDaysLeft?: number
+    canUpgrade: boolean
+  }
   switchToTenant: (tenantId: string) => void
   switchToSuperAdmin: () => void
+  refreshTenant: () => void
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
@@ -65,31 +91,21 @@ export function TenantProvider({ children }: TenantProviderProps) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const userData = localStorage.getItem('userData')
-    if (userData) {
+    const user = localStorage.getItem('user')
+    if (user) {
       try {
-        const parsedUser = JSON.parse(userData)
-        setUser(parsedUser)
-        setTenant(parsedUser.tenant)
+        const parsedUser = JSON.parse(user)
+        // Utiliser setTimeout pour éviter les setState synchrones dans l'effect
+        setTimeout(() => {
+          setUser(parsedUser)
+          setTenant(parsedUser.tenant)
+        }, 0)
       } catch (error) {
         console.error('Error parsing user data:', error)
-        localStorage.removeItem('userData')
+        localStorage.removeItem('user')
       }
     }
-  }, [])
-
-  useEffect(() => {
-    const tenantData = localStorage.getItem('tenantData')
-    if (tenantData) {
-      try {
-        const parsedTenant = JSON.parse(tenantData)
-        setTenant(parsedTenant)
-      } catch (error) {
-        console.error('Error parsing tenant data:', error)
-        localStorage.removeItem('tenantData')
-      }
-    }
-    setIsLoading(false)
+    setTimeout(() => setIsLoading(false), 0)
   }, [])
 
   const getPaymentMethods = (): string[] => {
@@ -121,6 +137,12 @@ export function TenantProvider({ children }: TenantProviderProps) {
         return 'Pharmacie'
       case 'supermarket':
         return 'Supermarché'
+      case 'hair_salon':
+        return 'Salon de coiffure'
+      case 'grocery':
+        return 'Épicerie'
+      case 'bar_restaurant':
+        return 'Bar/Restaurant'
       case 'retail':
       default:
         return 'Boutique'
@@ -138,54 +160,63 @@ export function TenantProvider({ children }: TenantProviderProps) {
         allowsTicketPrinting: false
       }
     }
+    
+    return tenant.features || {
+      allowsDebt: false,
+      allowsDelivery: false,
+      allowsTableService: false,
+      requiresTableNumber: false,
+      allowsFlashCustomers: false,
+      allowsTicketPrinting: false
+    }
+  }
 
-    switch (tenant.businessType) {
-      case 'restaurant':
-        return {
-          allowsDebt: true,
-          allowsDelivery: true,
-          allowsTableService: true,
-          requiresTableNumber: true,
-          allowsFlashCustomers: true,
-          allowsTicketPrinting: true
+  const getSubscriptionStatus = () => {
+    if (!tenant) {
+      return {
+        plan: 'free',
+        isTrial: false,
+        canUpgrade: false
+      }
+    }
+
+    const isTrial = tenant.subscriptionPlan === 'trial'
+    let trialDaysLeft: number | undefined
+    
+    if (isTrial && tenant.trialEndDate) {
+      const now = new Date()
+      const trialEnd = new Date(tenant.trialEndDate)
+      trialDaysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    }
+
+    return {
+      plan: tenant.subscriptionPlan,
+      isTrial,
+      trialDaysLeft,
+      canUpgrade: tenant.subscriptionPlan !== 'enterprise'
+    }
+  }
+
+  const refreshTenant = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token || !user) return
+
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      case 'bar':
-        return {
-          allowsDebt: true,
-          allowsDelivery: false,
-          allowsTableService: true,
-          requiresTableNumber: false,
-          allowsFlashCustomers: true,
-          allowsTicketPrinting: true
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.user) {
+          setUser(data.user)
+          setTenant(data.user.tenant)
         }
-      case 'pharmacy':
-        return {
-          allowsDebt: false,
-          allowsDelivery: true,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: true
-        }
-      case 'supermarket':
-        return {
-          allowsDebt: false,
-          allowsDelivery: true,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: true
-        }
-      case 'retail':
-      default:
-        return {
-          allowsDebt: false,
-          allowsDelivery: false,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: false
-        }
+      }
+    } catch (error) {
+      console.error('Error refreshing tenant:', error)
     }
   }
 
@@ -196,10 +227,12 @@ export function TenantProvider({ children }: TenantProviderProps) {
     getPaymentMethods,
     getBusinessLabel,
     getBusinessFeatures,
+    getSubscriptionStatus,
     superAdminUser: null,
     isSuperAdmin: false,
     switchToTenant: () => {},
-    switchToSuperAdmin: () => {}
+    switchToSuperAdmin: () => {},
+    refreshTenant
   }
 
   return (

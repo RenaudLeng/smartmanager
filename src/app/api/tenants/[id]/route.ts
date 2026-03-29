@@ -16,11 +16,13 @@ const updateTenantSchema = z.object({
 // GET /api/tenants/[id] - Récupérer un tenant spécifique
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const tenant = await prisma.tenant.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         users: {
           select: {
@@ -58,14 +60,15 @@ export async function GET(
 // PUT /api/tenants/[id] - Mettre à jour un tenant
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const validatedData = updateTenantSchema.parse(body)
 
     const tenant = await prisma.tenant.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData
     })
 
@@ -86,12 +89,14 @@ export async function PUT(
 // DELETE /api/tenants/[id] - Supprimer un tenant
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Vérifier si le tenant existe
     const tenant = await prisma.tenant.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!tenant) {
@@ -101,14 +106,95 @@ export async function DELETE(
       )
     }
 
-    // Supprimer d'abord les utilisateurs associés
-    await prisma.user.deleteMany({
-      where: { tenantId: params.id }
+    // Supprimer toutes les données associées dans le bon ordre (pour éviter les contraintes de clés étrangères)
+    
+    // 1. Supprimer les logs d'inventaire
+    await prisma.inventoryLog.deleteMany({
+      where: { tenantId: id }
     })
 
-    // Supprimer le tenant
+    // 2. Supprimer les items de ventes
+    const sales = await prisma.sale.findMany({
+      where: { tenantId: id },
+      select: { id: true }
+    })
+    
+    if (sales.length > 0) {
+      await prisma.saleItem.deleteMany({
+        where: { 
+          saleId: { in: sales.map(s => s.id) }
+        }
+      })
+    }
+
+    // 3. Supprimer les dettes
+    await prisma.debt.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 4. Supprimer les dépenses
+    await prisma.expense.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 5. Supprimer les ventes
+    await prisma.sale.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 6. Supprimer les produits
+    await prisma.product.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 7. Supprimer les catégories
+    await prisma.category.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 8. Supprimer les fournisseurs
+    await prisma.supplier.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 9. Supprimer les clients
+    await prisma.client.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 10. Supprimer le personnel
+    await prisma.staff.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 11. Supprimer les abonnements
+    await prisma.subscription.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 12. Supprimer les notifications
+    await prisma.notification.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 13. Supprimer les configurations de dashboard
+    await prisma.dashboardConfig.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 14. Supprimer les logs d'audit
+    await prisma.auditLog.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 15. Supprimer les utilisateurs associés
+    await prisma.user.deleteMany({
+      where: { tenantId: id }
+    })
+
+    // 16. Supprimer le tenant
     await prisma.tenant.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({

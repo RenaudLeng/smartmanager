@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { 
   FileText, 
   Download, 
@@ -14,12 +14,18 @@ import {
 import { useFinancial } from '@/hooks/useFinancial'
 import { FinancialReport } from '@/types/financial'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { apiService } from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function ReportsManager() {
   const { state, actions } = useFinancial()
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [selectedReport, setSelectedReport] = useState<FinancialReport | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('all')
+  const [reports, setReports] = useState<FinancialReport[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
   
   const { showNotification, NotificationComponent } = useNotifications()
   const { confirm, ConfirmDialogComponent } = useConfirmDialog()
@@ -29,6 +35,46 @@ export function ReportsManager() {
     start: '',
     end: ''
   })
+
+  // Charger les rapports depuis l'API
+  const loadReports = useCallback(async () => {
+    if (!user?.tenantId) return
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await apiService.getFinancialReports('monthly')
+      
+      if (response.success && response.data) {
+        const formattedReports = response.data.map((report: any) => ({
+          id: report.id,
+          title: report.title,
+          type: report.type,
+          period: {
+            start: report.startDate,
+            end: report.endDate
+          },
+          metrics: report.metrics,
+          transactions: report.transactions || [],
+          insights: report.insights,
+          createdAt: report.createdAt,
+          downloadUrl: report.downloadUrl
+        }))
+        
+        setReports(formattedReports)
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des rapports:', err)
+      setError('Impossible de charger les rapports')
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.tenantId])
+
+  useEffect(() => {
+    loadReports()
+  }, [loadReports])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-GA', {
@@ -58,13 +104,11 @@ export function ReportsManager() {
 
     if (confirmed) {
       try {
-        // Simuler la suppression du rapport
-        // await actions.deleteReport(report.id)
+        await apiService.deleteFinancialReport(report.id)
         
-        // Afficher la notification de succès
+        setReports(prev => prev.filter(r => r.id !== report.id))
         showNotification(`Rapport "${report.title}" supprimé avec succès!`, 'success')
 
-        console.log('Rapport supprimé:', report.id)
       } catch (error) {
         showNotification('Erreur lors de la suppression du rapport. Veuillez réessayer.', 'error')
         console.error('Erreur suppression rapport:', error)
@@ -76,23 +120,86 @@ export function ReportsManager() {
     e.preventDefault()
     
     try {
-      await actions.generateReport(generateForm.type, {
-        start: generateForm.start,
-        end: generateForm.end
+      setLoading(true)
+      setError(null)
+
+      const response = await apiService.generateFinancialReport({
+        type: generateForm.type,
+        startDate: generateForm.start,
+        endDate: generateForm.end
       })
       
-      setShowGenerateModal(false)
-      setGenerateForm({
-        type: 'monthly',
-        start: '',
-        end: ''
-      })
+      if (response.success && response.data) {
+        const newReport: FinancialReport = {
+          id: response.data.id,
+          title: response.data.title,
+          type: generateForm.type,
+          period: {
+            start: generateForm.start,
+            end: generateForm.end
+          },
+          metrics: response.data.metrics,
+          transactions: response.data.transactions || [],
+          insights: response.data.insights,
+          createdAt: response.data.createdAt,
+          downloadUrl: response.data.downloadUrl
+        }
+
+        setReports(prev => [newReport, ...prev])
+        
+        setShowGenerateModal(false)
+        setGenerateForm({
+          type: 'monthly',
+          start: '',
+          end: ''
+        })
+        
+        showNotification('Rapport généré avec succès!', 'success')
+      } else {
+        throw new Error(response.error || 'Erreur lors de la génération du rapport')
+      }
     } catch (error) {
       console.error('Erreur lors de la génération du rapport:', error)
+      setError('Erreur lors de la génération du rapport')
+      showNotification('Erreur lors de la génération du rapport', 'error')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const filteredReports = state.reports.filter(report => 
+  const handleDownloadReport = async (report: FinancialReport) => {
+    try {
+      if (report.downloadUrl) {
+        // Si le rapport a déjà une URL de téléchargement
+        const link = document.createElement('a')
+        link.href = report.downloadUrl
+        link.download = `${report.title}.xlsx`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        // Demander une nouvelle génération pour le téléchargement
+        const response = await apiService.exportFinancialReport(
+          `${report.period.start}_${report.period.end}`,
+          'excel'
+        )
+        
+        if (response.success && response.data?.downloadUrl) {
+          const link = document.createElement('a')
+          link.href = response.data.downloadUrl
+          link.download = `${report.title}.xlsx`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error)
+      showNotification('Erreur lors du téléchargement du rapport', 'error')
+    }
+  }
+
+  const filteredReports = reports.filter(report => 
     filterType === 'all' || report.type === filterType
   )
 

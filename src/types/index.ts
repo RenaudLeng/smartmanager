@@ -420,7 +420,7 @@ export interface SuperAdminUser {
 export interface TenantStats {
   id: string
   name: string
-  businessType: string
+  businessType: 'retail' | 'restaurant' | 'bar' | 'pharmacy' | 'supermarket' | 'hair_salon' | 'grocery' | 'bar_restaurant'
   status: 'active' | 'suspended' | 'inactive'
   createdAt: Date
   lastActive?: Date
@@ -457,7 +457,7 @@ export interface AuditLog {
   timestamp: Date
   ipAddress?: string
   userAgent?: string
-  details?: any
+  details?: Record<string, unknown>
 }
 
 export interface SubscriptionPlan {

@@ -1,92 +1,153 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import toast from 'react-hot-toast'
-import type { 
-  Notification as NotificationType, 
-  NotificationPriority, 
-  NotificationPreferences,
-  SmartAlertConfig 
-} from '@/types/notifications'
+import { useState, useCallback, useEffect } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import apiService from '@/services/api'
 
-const DEFAULT_CONFIG: SmartAlertConfig = {
-  stockThresholds: {
-    low: 20,
-    critical: 5
-  },
-  salesTargets: {
-    daily: 100000,
-    weekly: 700000,
-    monthly: 3000000
-  },
-  expenseLimits: {
-    daily: 50000,
-    weekly: 300000,
-    monthly: 1000000
-  },
+type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+interface NotificationType {
+  id: string
+  type: string
+  title: string
+  message: string
+  priority: NotificationPriority
+  read: boolean
+  createdAt: string
+  actionUrl?: string
+  actionText?: string
+  dismissAfter?: number
+  metadata?: Record<string, any>
+  autoDismiss?: boolean
+  data?: {
+    actionUrl?: string
+    actionText?: string
+    metadata?: Record<string, any>
+  }
+}
+
+interface NotificationPreferences {
+  emailNotifications: boolean
+  pushNotifications: boolean
+  desktopNotifications: boolean
+  soundEnabled: boolean
+  enabled: boolean
+  rules: Array<{
+    type: NotificationType['type']
+    enabled: boolean
+  }>
+  quietHours: {
+    enabled: boolean
+    start: string
+    end: string
+  }
+}
+
+interface SmartAlertConfig {
   profitMargins: {
-    minimum: 15
-  },
-  paymentTerms: {
-    overdueDays: 7
+    minimum: number
+  }
+  salesTargets: {
+    daily: number
+  }
+  expenseLimits: {
+    daily: number
+  }
+  stockThresholds: {
+    critical: number
+    low: number
   }
 }
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
-  userId: '',
-  enabled: false, // Désactiver les notifications par défaut
+  emailNotifications: false,
+  pushNotifications: false,
+  desktopNotifications: false,
+  soundEnabled: false,
+  enabled: true,
   rules: [],
   quietHours: {
     enabled: false,
     start: '22:00',
     end: '08:00'
   },
-  soundEnabled: false, // Désactiver le son par défaut
-  desktopNotifications: false, // Désactiver les notifications desktop par défaut
-  emailNotifications: false
+}
+
+const DEFAULT_CONFIG: SmartAlertConfig = {
+  profitMargins: {
+    minimum: 10
+  },
+  salesTargets: {
+    daily: 100000
+  },
+  expenseLimits: {
+    daily: 50000
+  },
+  stockThresholds: {
+    critical: 10,
+    low: 20
+  }
 }
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationType[]>([])
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES)
   const [config, setConfig] = useState<SmartAlertConfig>(DEFAULT_CONFIG)
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  useEffect(() => {
-    const loadSavedData = () => {
-      // Effacer toutes les notifications existantes au chargement
-      localStorage.removeItem('notifications')
-      setNotifications([])
+  // Charger les notifications depuis la base de données
+  const loadNotifications = useCallback(async () => {
+    if (!user?.tenantId) return
+
+    try {
+      setLoading(true)
+      const response = await apiService.getNotifications()
       
-      const savedPreferences = localStorage.getItem('notificationPreferences')
-      const savedConfig = localStorage.getItem('smartAlertConfig')
-
-      if (savedPreferences) {
-        try {
-          setPreferences(JSON.parse(savedPreferences))
-        } catch (error) {
-          console.error('Erreur lors du chargement des préférences:', error)
-        }
+      if (response.success && response.data) {
+        const formattedNotifications = response.data.map((notification: any) => ({
+          ...notification,
+          createdAt: new Date(notification.createdAt).toISOString()
+        }))
+        
+        setNotifications(formattedNotifications)
       }
+    } catch (error) {
+      console.error('Erreur lors du chargement des notifications:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.tenantId])
 
-      if (savedConfig) {
-        try {
-          setConfig(JSON.parse(savedConfig))
-        } catch (error) {
-          console.error('Erreur lors du chargement de la configuration:', error)
-        }
+  // Charger les préférences utilisateur
+  const loadPreferences = useCallback(async () => {
+    if (!user?.id) return
+
+    try {
+      const response = await apiService.getUserNotificationPreferences()
+      
+      if (response.success && response.data) {
+        setPreferences(response.data)
       }
+    } catch (error) {
+      console.error('Erreur lors du chargement des préférences:', error)
     }
-    
-    loadSavedData()
-  }, [])
+  }, [user?.id])
 
-  useEffect(() => {
-    const updateLocalStorage = () => {
-      localStorage.setItem('notifications', JSON.stringify(notifications))
+  // Charger la configuration des alertes
+  const loadConfig = useCallback(async () => {
+    try {
+      const response = await apiService.getNotificationConfig()
+      
+      if (response.success && response.data) {
+        setConfig(response.data)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la configuration:', error)
     }
-    updateLocalStorage()
-  }, [notifications])
+  }, [user?.tenantId])
 
+  // Vérifier si c'est pendant les heures silencieuses
   const isQuietHours = useCallback(() => {
     if (!preferences.quietHours.enabled) return false
     
@@ -96,7 +157,7 @@ export function useNotifications() {
     const [endHour, endMin] = preferences.quietHours.end.split(':').map(Number)
     const startTime = startHour * 60 + startMin
     const endTime = endHour * 60 + endMin
-
+    
     if (startTime <= endTime) {
       return currentTime >= startTime && currentTime <= endTime
     } else {
@@ -104,182 +165,159 @@ export function useNotifications() {
     }
   }, [preferences.quietHours])
 
+  // Vérifier si une notification doit être affichée
   const shouldShowNotification = useCallback((notification: NotificationType) => {
     if (!preferences.enabled) return false
-    if (isQuietHours() && notification.priority !== 'urgent') return false
+    if (isQuietHours() && notification.priority === 'low') return false
     
     const rule = preferences.rules.find(r => r.type === notification.type)
     if (rule && !rule.enabled) return false
     
     return true
-  }, [preferences, isQuietHours])
+  }, [preferences.rules, isQuietHours])
 
-  const addNotification = useCallback((
+  // Ajouter une notification
+  const addNotification = useCallback(async (
     type: NotificationType['type'],
     title: string,
     message: string,
     priority: NotificationPriority = 'medium',
     options: Partial<NotificationType> = {}
   ) => {
-    const notification: NotificationType = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      title,
-      message,
-      priority,
-      timestamp: new Date(),
-      read: false,
-      autoDismiss: priority === 'low',
-      dismissAfter: priority === 'low' ? 5000 : undefined,
-      ...options
-    }
+    if (!user?.tenantId) return null
 
-    if (shouldShowNotification(notification)) {
-      setNotifications(prev => [notification, ...prev])
-
-      if (!isQuietHours()) {
-        const toastOptions = {
-          duration: notification.dismissAfter || 4000,
-          icon: getNotificationIcon(type),
-          style: getToastStyle(priority)
-        }
-
-        if (notification.actionText && notification.actionUrl) {
-          toast(
-            `${notification.title}: ${notification.message}. ${notification.actionText}`,
-            toastOptions
-          )
-        } else {
-          toast(`${notification.title}: ${notification.message}`, toastOptions)
+    try {
+      // Créer la notification dans la base de données
+      const notificationData = {
+        type,
+        title,
+        message,
+        priority,
+        data: {
+          actionUrl: options.actionUrl,
+          actionText: options.actionText,
+          metadata: options.metadata
         }
       }
 
-      if (preferences.desktopNotifications && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(notification.title, {
-            body: notification.message,
-            icon: '/favicon-32x32.png',
-            tag: notification.id
-          })
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission()
-        }
-      }
-    }
-
-    return notification
-  }, [shouldShowNotification, isQuietHours, preferences.desktopNotifications])
-
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    )
-  }, [])
-
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    )
-  }, [])
-
-  const deleteNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-  }, [])
-
-  const clearAll = useCallback(() => {
-    setNotifications([])
-  }, [])
-
-  const updatePreferences = useCallback((newPreferences: Partial<NotificationPreferences>) => {
-    const updated = { ...preferences, ...newPreferences }
-    setPreferences(updated)
-    localStorage.setItem('notificationPreferences', JSON.stringify(updated))
-  }, [preferences])
-
-  const updateConfig = useCallback((newConfig: Partial<SmartAlertConfig>) => {
-    const updated = { ...config, ...newConfig }
-    setConfig(updated)
-    localStorage.setItem('smartAlertConfig', JSON.stringify(updated))
-  }, [config])
-
-  const checkStockAlerts = useCallback((products: Array<{ name: string; stock: number; minStock: number }>) => {
-    products.forEach(product => {
-      const stockPercentage = (product.stock / product.minStock) * 100
+      const response = await apiService.createNotification(notificationData)
       
-      if (stockPercentage <= config.stockThresholds.critical) {
-        addNotification(
-          'stock_out',
-          'Stock critique',
-          `${product.name} est en rupture de stock (${product.stock} unités)`,
-          'urgent',
-          {
-            actionUrl: '/products',
-            actionText: 'Voir les produits',
-            metadata: { productId: product.name, stock: product.stock }
-          }
-        )
-      } else if (stockPercentage <= config.stockThresholds.low) {
-        addNotification(
-          'stock_low',
-          'Stock faible',
-          `${product.name} a un stock faible (${product.stock} unités)`,
-          'high',
-          {
-            actionUrl: '/products',
-            actionText: 'Réapprovisionner',
-            metadata: { productId: product.name, stock: product.stock }
-          }
-        )
+      if (response.success && response.data) {
+        const newNotification: NotificationType = {
+          id: response.data.id,
+          type,
+          title,
+          message,
+          priority,
+          read: false,
+          createdAt: new Date().toISOString(),
+          data: response.data
+        }
+
+        setNotifications(prev => [newNotification, ...prev])
+        
+        // Afficher la notification toast (optionnel - peut être implémenté plus tard)
+        if (!isQuietHours()) {
+          console.log(`Notification: ${newNotification.title}: ${newNotification.message}`)
+        }
+
+        return newNotification
       }
-    })
-  }, [config.stockThresholds, addNotification])
-
-  const checkSalesAlerts = useCallback((sales: { daily: number; weekly: number; monthly: number }) => {
-    if (sales.daily < config.salesTargets.daily * 0.5) {
-      addNotification(
-        'sales_low',
-        'Ventes quotidiennes faibles',
-        `Ventes du jour: ${sales.daily.toLocaleString('fr-GA')} XAF (objectif: ${config.salesTargets.daily.toLocaleString('fr-GA')} XAF)`,
-        'medium',
-        {
-          actionUrl: '/dashboard',
-          actionText: 'Voir les ventes'
-        }
-      )
+    } catch (error) {
+      console.error('Erreur lors de la création de la notification:', error)
+      return null
     }
+  }, [user?.tenantId])
 
-    if (sales.daily > config.salesTargets.daily * 1.2) {
-      addNotification(
-        'sales_high',
-        'Excellentes ventes quotidiennes',
-        `Ventes du jour: ${sales.daily.toLocaleString('fr-GA')} XAF (objectif dépassé de 20%)`,
-        'success' as const,
-        {
-          autoDismiss: true,
-          dismissAfter: 3000
-        }
+  // Obtenir le nombre de notifications non lues
+  const getUnreadCount = useCallback(() => {
+    return notifications.filter(n => !n.read).length
+  }, [notifications])
+
+  // Obtenir le nombre de notifications urgentes
+  const getUrgentCount = useCallback(() => {
+    return notifications.filter(n => n.priority === 'urgent' && !n.read).length
+  }, [notifications])
+
+  // Rafraîchir les notifications
+  const refreshNotifications = useCallback(() => {
+    loadNotifications()
+  }, [loadNotifications])
+
+  // Marquer une notification comme lue
+  const markAsRead = useCallback(async (id: string) => {
+    try {
+      await apiService.markNotificationAsRead(id)
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read: true }))
       )
+    } catch (error) {
+      console.error('Erreur lors du marquage de la notification:', error)
     }
-  }, [config.salesTargets, addNotification])
+  }, [])
 
-  const checkExpenseAlerts = useCallback((expenses: { daily: number; weekly: number; monthly: number }) => {
-    if (expenses.daily > config.expenseLimits.daily) {
-      addNotification(
-        'expense_high',
-        'Limite de dépenses dépassée',
-        `Dépenses du jour: ${expenses.daily.toLocaleString('fr-GA')} XAF (limite: ${config.expenseLimits.daily.toLocaleString('fr-GA')} XAF)`,
-        'high',
-        {
-          actionUrl: '/expenses',
-          actionText: 'Voir les dépenses'
-        }
+  // Supprimer une notification
+  const deleteNotification = useCallback(async (id: string) => {
+    try {
+      await apiService.deleteNotification(id)
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la notification:', error)
+    }
+  }, [])
+
+  // Marquer toutes les notifications comme lues
+  const markAllAsRead = useCallback(async () => {
+    try {
+      await apiService.markAllNotificationsAsRead()
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read: true }))
       )
+    } catch (error) {
+      console.error('Erreur lors du marquage de tout comme lu:', error)
     }
-  }, [config.expenseLimits, addNotification])
+  }, [])
 
-  const checkProfitAlerts = useCallback((profitMargin: number) => {
-    if (profitMargin < config.profitMargins.minimum) {
-      addNotification(
+  // Vider toutes les notifications
+  const clearAll = useCallback(async () => {
+    try {
+      await apiService.clearAllNotifications()
+      setNotifications([])
+    } catch (error) {
+      console.error('Erreur lors du nettoyage des notifications:', error)
+    }
+  }, [])
+
+  // Mettre à jour les préférences
+  const updatePreferences = useCallback(async (newPreferences: Partial<NotificationPreferences>) => {
+    try {
+      const response = await apiService.updateNotificationPreferences(newPreferences)
+      
+      if (response.success) {
+        setPreferences(prev => ({ ...prev, ...newPreferences }))
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des préférences:', error)
+    }
+  }, [])
+
+  // Mettre à jour la configuration
+  const updateConfig = useCallback(async (newConfig: Partial<SmartAlertConfig>) => {
+    try {
+      const response = await apiService.updateNotificationConfig(newConfig)
+      
+      if (response.success) {
+        setConfig(prev => ({ ...prev, ...newConfig }))
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la configuration:', error)
+    }
+  }, [])
+
+  // Alertes de bénéfices
+  const checkProfitAlerts = useCallback(async (profitMargin: number) => {
+    if (config && config.profitMargins && profitMargin < config.profitMargins.minimum) {
+      await addNotification(
         'profit_low',
         'Marge bénéficiaire faible',
         `Marge actuelle: ${profitMargin.toFixed(1)}% (minimum: ${config.profitMargins.minimum}%)`,
@@ -290,20 +328,93 @@ export function useNotifications() {
         }
       )
     }
-  }, [config.profitMargins.minimum, addNotification])
+  }, [config?.profitMargins?.minimum]) // Supprimé addNotification pour éviter la boucle
 
-  const getUnreadCount = useCallback(() => {
-    return notifications.filter(n => !n.read).length
-  }, [notifications])
+  // Alertes de ventes
+  const checkSalesAlerts = useCallback(async (sales: { daily: number; weekly: number; monthly: number }) => {
+    if (sales.daily > config.salesTargets.daily * 0.5) {
+      await addNotification(
+        'sales_low',
+        'Ventes quotidiennes faibles',
+        `Ventes du jour: ${sales.daily.toLocaleString('fr-GA')} XAF (objectif: ${config.salesTargets.daily.toLocaleString('fr-GA')} XAF)`,
+        'medium' as NotificationPriority,
+        {
+          autoDismiss: true,
+          dismissAfter: 3000
+        }
+      )
+    } else if (sales.daily > config.salesTargets.daily * 1.2) {
+      await addNotification(
+        'sales_high',
+        'Excellentes ventes quotidiennes',
+        `Ventes du jour: ${sales.daily.toLocaleString('fr-GA')} XAF (objectif dépassé de 20%)`,
+        'medium' as NotificationPriority,
+        {
+          autoDismiss: true,
+          dismissAfter: 3000
+        }
+      )
+    }
+  }, [config.salesTargets]) // Supprimé addNotification pour éviter la boucle
 
-  const getUrgentCount = useCallback(() => {
-    return notifications.filter(n => n.priority === 'urgent' && !n.read).length
-  }, [notifications])
+  // Alertes de dépenses
+  const checkExpenseAlerts = useCallback(async (expenses: { daily: number; weekly: number; monthly: number }) => {
+    if (expenses.daily > config.expenseLimits.daily) {
+      await addNotification(
+        'expense_high',
+        'Limite de dépenses dépassée',
+        `Dépenses du jour: ${expenses.daily.toLocaleString('fr-GA')} XAF (limite: ${config.expenseLimits.daily.toLocaleString('fr-GA')} XAF)`,
+        'high',
+        {
+          actionUrl: '/expenses',
+          actionText: 'Voir les dépenses'
+        }
+      )
+    }
+  }, [config.expenseLimits]) // Supprimé addNotification pour éviter la boucle
+
+  // Alertes de stock
+  const checkStockAlerts = useCallback(async (products: Array<{ id: string; name: string; quantity: number; minStock: number }>) => {
+    for (const product of products) {
+      const stockPercentage = (product.quantity / product.minStock) * 100
+      
+      if (stockPercentage <= config.stockThresholds.critical) {
+        await addNotification(
+          'stock_out',
+          'Stock critique',
+          `${product.name} est en rupture de stock (${product.quantity} unités)`,
+          'urgent',
+          {
+            actionUrl: '/stock',
+            actionText: 'Voir les produits',
+            metadata: { productId: product.id, stock: product.quantity }
+          }
+        )
+      } else if (stockPercentage <= config.stockThresholds.low) {
+        await addNotification(
+          'stock_low',
+          'Stock faible',
+          `${product.name} a un stock faible (${product.quantity} unités)`,
+          'high',
+          {
+            actionUrl: '/stock',
+            actionText: 'Voir les produits'
+          }
+        )
+      }
+    }
+  }, [config.stockThresholds]) // Supprimé addNotification pour éviter la boucle
+
+  useEffect(() => {
+    if (user?.tenantId) {
+      loadNotifications()
+      loadPreferences()
+      loadConfig()
+    }
+  }, [user?.tenantId]) // Supprimé les fonctions des dépendances
 
   return {
-    notifications,
-    preferences,
-    config,
+    loading,
     unreadCount: getUnreadCount(),
     urgentCount: getUrgentCount(),
     addNotification,
@@ -311,56 +422,41 @@ export function useNotifications() {
     markAllAsRead,
     deleteNotification,
     clearAll,
+    notifications,
+    preferences,
+    config,
     updatePreferences,
     updateConfig,
-    checkStockAlerts,
+    checkProfitAlerts,
     checkSalesAlerts,
     checkExpenseAlerts,
-    checkProfitAlerts
+    checkStockAlerts,
+    refreshNotifications
   }
 }
 
-function getNotificationIcon(type: NotificationType['type']): string {
-  const icons: Record<NotificationType['type'], string> = {
-    stock_low: '📦',
-    stock_out: '🚨',
-    sales_high: '📈',
-    sales_low: '📉',
-    payment_overdue: '💰',
-    expense_high: '💸',
-    profit_low: '📊',
-    customer_new: '👥',
-    supplier_late: '🚚',
-    system_error: '⚠️',
-    success: '✅',
-    warning: '⚠️',
-    info: 'ℹ️'
+// Fonctions utilitaires - déplacées vers des composants React
+export const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case 'stock_out': return 'alert'
+    case 'stock_low': return 'trending-down'
+    case 'expense_high': return 'trending-up'
+    case 'sales_low': return 'trending-down'
+    case 'sales_high': return 'trending-up'
+    case 'profit_low': return 'trending-down'
+    case 'info': return 'bell'
+    case 'success': return 'check-circle'
+    case 'warning': return 'alert'
+    default: return 'bell'
   }
-  return icons[type] || '🔔'
 }
 
-function getToastStyle(priority: NotificationPriority): React.CSSProperties {
-  const styles: Record<NotificationPriority, React.CSSProperties> = {
-    low: {
-      background: '#374151',
-      color: '#fff',
-      border: '1px solid #4b5563'
-    },
-    medium: {
-      background: '#f59e0b',
-      color: '#fff',
-      border: '1px solid #d97706'
-    },
-    high: {
-      background: '#ea580c',
-      color: '#fff',
-      border: '1px solid #c2410c'
-    },
-    urgent: {
-      background: '#dc2626',
-      color: '#fff',
-      border: '1px solid #b91c1c'
-    }
+export const getToastStyle = (priority: NotificationPriority) => {
+  switch (priority) {
+    case 'urgent': return 'bg-red-500'
+    case 'high': return 'bg-orange-500'
+    case 'medium': return 'bg-blue-500'
+    case 'low': return 'bg-gray-500'
+    default: return 'bg-gray-500'
   }
-  return styles[priority]
 }

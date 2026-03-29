@@ -148,7 +148,7 @@ model Sale {
   // Relations
   tenant            Tenant   @relation(fields: [tenantId], references: [id])
   client            Client?  @relation(fields: [clientId], references: [id])
-  user              User     @relation(fields: [userId], references: [id])
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   items             SaleItem[]
 
   @@map("sales")
@@ -225,7 +225,7 @@ model Expense {
 
   // Relations
   tenant            Tenant   @relation(fields: [tenantId], references: [id])
-  user              User     @relation(fields: [userId], references: [id])
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("expenses")
 }
@@ -331,7 +331,7 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   // Relations
-  user        User?    @relation(fields: [userId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant      Tenant?  @relation(fields: [tenantId], references: [id])
 
   @@map("audit_logs")

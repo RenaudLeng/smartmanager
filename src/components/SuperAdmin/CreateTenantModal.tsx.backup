@@ -1,0 +1,697 @@
+import React, { useState } from 'react'
+import { 
+  Building2, X, Users, Package, DollarSign, Store, Beer, Shield, 
+  ShoppingCart, Scissors, ChevronRight
+} from 'lucide-react'
+import { BUSINESS_CATEGORIES } from '@/config/businessCategories'
+
+// Types pour les configurations par type de business
+interface BusinessTypeConfig {
+  categories: { name: string; description?: string }[]
+  defaultProducts: { name: string; sellingPrice: number; category: string; description?: string }[]
+  defaultExpenses: string[]
+}
+
+interface PredictedRevenueRange {
+  min: number
+  max: number
+  confidence: 'Élevée' | 'Moyenne' | 'Faible'
+}
+
+interface CreateTenantModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (data: any) => Promise<void>
+}
+
+interface CreateTenantData {
+  name: string
+  email: string
+  phone: string
+  address: string
+  businessType: string
+  adminName: string
+  adminEmail: string
+  adminPassword: string
+  subscriptionPlan: string
+  predictedRevenue?: number
+  predictedRevenueRange?: PredictedRevenueRange
+  aiSuggestions?: string[]
+}
+
+interface SubscriptionPlan {
+  id: string
+  name: string
+  price: number
+  features: string[]
+  description: string
+}
+
+interface TenantFormData {
+  name: string
+  businessType: string
+  email: string
+  phone: string
+  address: string
+  adminName: string
+  adminEmail: string
+  adminPassword: string
+  confirmPassword: string
+  subscriptionPlan: string
+}
+
+export default function CreateTenantModal({ isOpen, onClose, onSubmit }: CreateTenantModalProps) {
+  const [currentStep, setCurrentStep] = useState(1)
+  const [formData, setFormData] = useState<TenantFormData>({
+    name: '',
+    businessType: 'retail',
+    email: '',
+    phone: '',
+    address: '',
+    adminName: '',
+    adminEmail: '',
+    adminPassword: '',
+    confirmPassword: '',
+    subscriptionPlan: 'free'
+  })
+
+  // Types de business disponibles
+  const businessTypes: {
+    id: string
+    name: string
+    icon: any
+    description: string
+    config: {
+      categories: { name: string; description?: string }[]
+      defaultProducts: { name: string; sellingPrice: number; category: string }[]
+      defaultExpenses: string[]
+    }
+  }[] = [
+    {
+      id: 'retail',
+      name: 'Boutique',
+      icon: Building2,
+      description: 'Vente de produits et services',
+      config: {
+        categories: BUSINESS_CATEGORIES.retail,
+        defaultProducts: [
+          { name: 'T-shirt', sellingPrice: 5000, category: 'Vêtements' },
+          { name: 'Jean', sellingPrice: 15000, category: 'Vêtements' },
+          { name: 'Chaussures', sellingPrice: 25000, category: 'Accessoires' }
+        ],
+        defaultExpenses: ['Loyer', 'Électricité', 'Salaires']
+      }
+    },
+    {
+      id: 'restaurant',
+      name: 'Restaurant',
+      icon: Users,
+      description: 'Service de restauration',
+      config: {
+        categories: BUSINESS_CATEGORIES.restaurant,
+        defaultProducts: [
+          { name: 'Plat du jour', sellingPrice: 3500, category: 'Plats principaux' },
+          { name: 'Boisson', sellingPrice: 800, category: 'Boissons' },
+          { name: 'Dessert', sellingPrice: 1500, category: 'Desserts' }
+        ],
+        defaultExpenses: ['Ingrédients', 'Loyer', 'Salaires']
+      }
+    },
+    {
+      id: 'bar',
+      name: 'Bar',
+      icon: Beer,
+      description: 'Bar et service de boissons',
+      config: {
+        categories: BUSINESS_CATEGORIES.bar,
+        defaultProducts: [
+          { name: 'Bière', sellingPrice: 1200, category: 'Boissons alcoolisées' },
+          { name: 'Cocktail', sellingPrice: 3000, category: 'Cocktails' },
+          { name: 'Snack', sellingPrice: 1500, category: 'Snacks' }
+        ],
+        defaultExpenses: ['Alcools', 'Loyer', 'Salaires']
+      }
+    },
+    {
+      id: 'pharmacy',
+      name: 'Pharmacie',
+      icon: Shield,
+      description: 'Produits pharmaceutiques et de santé',
+      config: {
+        categories: BUSINESS_CATEGORIES.pharmacy,
+        defaultProducts: [
+          { name: 'Paracétamol', sellingPrice: 500, category: 'Médicaments' },
+          { name: 'Masques', sellingPrice: 2000, category: 'Produits hygiène' },
+          { name: 'Vitamine C', sellingPrice: 3000, category: 'Vitamines' }
+        ],
+        defaultExpenses: ['Médicaments', 'Loyer', 'Licence']
+      }
+    },
+    {
+      id: 'supermarket',
+      name: 'Supermarché',
+      icon: ShoppingCart,
+      description: 'Grande surface de vente',
+      config: {
+        categories: BUSINESS_CATEGORIES.supermarket,
+        defaultProducts: [
+          { name: 'Riz 1kg', sellingPrice: 1500, category: 'Épicerie' },
+          { name: 'Huile', sellingPrice: 2500, category: 'Épicerie' },
+          { name: 'Pain', sellingPrice: 500, category: 'Boulangerie' }
+        ],
+        defaultExpenses: ['Fournisseurs', 'Loyer', 'Salaires']
+      }
+    },
+    {
+      id: 'hair_salon',
+      name: 'Salon de coiffure',
+      icon: Scissors,
+      description: 'Services de coiffure et beauté',
+      config: {
+        categories: BUSINESS_CATEGORIES.hair_salon,
+        defaultProducts: [
+          { name: 'Coupe homme', sellingPrice: 3000, category: 'Coupe homme' },
+          { name: 'Coupe femme', sellingPrice: 5000, category: 'Coupe femme' },
+          { name: 'Coloration', sellingPrice: 15000, category: 'Coloration' }
+        ],
+        defaultExpenses: ['Produits', 'Loyer', 'Salaires']
+      }
+    },
+    {
+      id: 'grocery',
+      name: 'Épicerie',
+      icon: Package,
+      description: 'Produits alimentaires en vrac',
+      config: {
+        categories: BUSINESS_CATEGORIES.grocery,
+        defaultProducts: [
+          { name: 'Riz 5kg', sellingPrice: 6000, category: 'Céréales' },
+          { name: 'Haricots', sellingPrice: 2000, category: 'Légumineuses' },
+          { name: 'Huile', sellingPrice: 3000, category: 'Huiles et graisses' }
+        ],
+        defaultExpenses: ['Fournisseurs', 'Loyer', 'Transport']
+      }
+    },
+    {
+      id: 'bar_restaurant',
+      name: 'Bar/Restaurant',
+      icon: Beer,
+      description: 'Établissement mixte bar et restaurant',
+      config: {
+        categories: BUSINESS_CATEGORIES.bar_restaurant,
+        defaultProducts: [
+          { name: 'Plat complet', sellingPrice: 4000, category: 'Plats principaux' },
+          { name: 'Bière', sellingPrice: 1200, category: 'Boissons alcoolisées' },
+          { name: 'Cocktail', sellingPrice: 3500, category: 'Cocktails' }
+        ],
+        defaultExpenses: ['Ingrédients', 'Alcools', 'Loyer', 'Salaires']
+      }
+    }
+  ]
+
+  // Plans d'abonnement
+  const subscriptionPlans: {
+    id: string
+    name: string
+    price: number
+    features: string[]
+  }[] = [
+    { 
+      id: 'free', 
+      name: 'Gratuit', 
+      price: 0,
+      features: ['3 utilisateurs', '500 produits', '1 Go stockage']
+    },
+    { 
+      id: 'premium', 
+      name: 'Premium', 
+      price: 10000,
+      features: ['10 utilisateurs', '500 produits', '2 Go stockage', 'Rapports avancés']
+    },
+    { 
+      id: 'enterprise', 
+      name: 'Enterprise', 
+      price: 25000,
+      features: ['50 utilisateurs', '5000 produits', '10 Go stockage', 'Support prioritaire']
+    }
+  ]
+
+  const validateForm = () => {
+    console.log('Validation du formulaire...', formData)
+    
+    // Validation des champs requis
+    if (!formData.name || formData.name.trim().length < 2) {
+      console.error('Nom du tenant invalide')
+      return false
+    }
+    
+    if (!formData.adminName || formData.adminName.trim().length < 2) {
+      console.error('Nom admin invalide')
+      return false
+    }
+    
+    if (!formData.adminEmail || !formData.adminEmail.includes('@')) {
+      console.error('Email admin invalide')
+      return false
+    }
+    
+    // Validation des mots de passe
+    if (formData.adminPassword !== formData.confirmPassword) {
+      console.error('Les mots de passe ne correspondent pas')
+      return false
+    }
+    
+    if (formData.adminPassword.length < 6) {
+      console.error('Le mot de passe doit contenir au moins 6 caractères')
+      return false
+    }
+    
+    console.log('Formulaire valide!')
+    return true
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log('Début handleSubmit - Soumission du formulaire...')
+    
+    if (!validateForm()) {
+      console.error('Formulaire invalide - arrêt de la soumission')
+      return
+    }
+    
+    console.log('Préparation des données tenant...')
+    const tenantData = {
+      name: formData.name,
+      businessType: formData.businessType,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      adminName: formData.adminName,
+      adminEmail: formData.adminEmail,
+      adminPassword: formData.adminPassword,
+      subscriptionPlan: formData.subscriptionPlan,
+      businessConfig: businessTypes.find(bt => bt.id === formData.businessType)?.config || businessTypes[0].config
+    }
+    
+    console.log('Données tenant préparées:', tenantData)
+    console.log('Appel de onSubmit...')
+    
+    try {
+      await onSubmit(tenantData)
+      console.log('onSubmit terminé avec succès')
+      
+      // Reset form seulement après succès
+      setFormData({
+        name: '',
+        businessType: 'retail',
+        email: '',
+        phone: '',
+        address: '',
+        adminName: '',
+        adminEmail: '',
+        adminPassword: '',
+        confirmPassword: '',
+        subscriptionPlan: 'free'
+      })
+      setCurrentStep(1)
+      onClose()
+      console.log('Formulaire réinitialisé et modal fermé')
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error)
+    }
+  }
+
+  const selectedBusinessType = businessTypes.find(bt => bt.id === formData.businessType)
+  const currentSelectedPlan = subscriptionPlans.find(plan => plan.id === formData.subscriptionPlan)
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-white/20 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center space-x-3">
+            <Building2 className="h-6 w-6 text-orange-500" />
+            <div>
+              <h2 className="text-xl font-bold text-white">Créer une nouvelle boutique</h2>
+              <p className="text-sm text-gray-400">
+                Configuration automatique basée sur le type de commerce
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Progress indicator */}
+        <div className="flex items-center justify-center space-x-2 p-4 border-b border-white/10">
+          {[1, 2, 3].map((stepNumber) => (
+            <React.Fragment key={stepNumber}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                currentStep >= stepNumber 
+                  ? 'bg-orange-500 text-white' 
+                  : 'bg-gray-700 text-gray-400'
+              }`}>
+                {stepNumber === 1 && <Store className="w-4 h-4" />}
+                {stepNumber === 2 && <Users className="w-4 h-4" />}
+                {stepNumber === 3 && <DollarSign className="w-4 h-4" />}
+              </div>
+              {stepNumber < 3 && (
+                <ChevronRight className={`w-4 h-4 ${
+                  currentStep > stepNumber ? 'text-orange-500' : 'text-gray-700'
+                }`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Informations de la boutique</h3>
+              
+              {/* Type de business */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">Type de commerce *</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {businessTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, businessType: type.id })}
+                      className={`p-4 rounded-lg border transition-all duration-300 text-left relative ${
+                        formData.businessType === type.id
+                          ? 'border-orange-500 bg-orange-500/20 shadow-lg shadow-orange-500/30 ring-2 ring-orange-500/50 transform scale-105'
+                          : 'border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <type.icon className="w-8 h-8 mx-auto text-white mb-2" />
+                        <h4 className="font-semibold text-white mb-1">{type.name}</h4>
+                        <p className="text-xs text-gray-400">{type.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Informations boutique */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-300">Nom de la boutique *</label>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Ex: Boutique du Centre"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Email de la boutique *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="contact@boutique.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Téléphone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="+241 00 00 00 00"
+                  />
+                </div>
+                <div>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-300">Adresse</label>
+                  </div>
+                  <textarea
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                    placeholder="Adresse complète de la boutique"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Configuration automatique basée sur le type */}
+          {selectedBusinessType && (
+            <div className="bg-black/40 rounded-lg p-4">
+              <h4 className="font-semibold text-white mb-3">Configuration automatique pour {selectedBusinessType.name}</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 className="text-sm font-medium text-gray-300 mb-2">Catégories pré-configurées</h5>
+                  <div className="space-y-1">
+                    {selectedBusinessType.config.categories?.slice(0, 3).map((category, index) => (
+                      <div key={index} className="flex items-center space-x-2 text-xs text-gray-400">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <span>{category.name}</span>
+                      </div>
+                    ))}
+                    {selectedBusinessType.config.categories?.length > 3 && (
+                      <span className="text-xs text-orange-400">+{selectedBusinessType.config.categories.length - 3} autres...</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h5 className="text-sm font-medium text-gray-300 mb-2">Produits par défaut</h5>
+                  <div className="space-y-1">
+                    {selectedBusinessType.config.defaultProducts?.slice(0, 3).map((product, index) => (
+                      <div key={index} className="flex justify-between text-xs">
+                        <span className="text-gray-400">{product.name}</span>
+                        <span className="text-gray-500">{product.sellingPrice.toLocaleString('fr-GA')} XAF</span>
+                      </div>
+                    ))}
+                    {selectedBusinessType.config.defaultProducts?.length > 3 && (
+                      <span className="text-xs text-orange-400">+{selectedBusinessType.config.defaultProducts.length - 3} autres...</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Administrateur de la boutique</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Nom complet de l&apos;admin *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.adminName}
+                    onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Mangongui Filibert"
+                  />
+                </div>
+                <div>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-300">Email de l&apos;admin *</label>
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={formData.adminEmail}
+                    onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="admin@boutique.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Mot de passe de l&apos;admin *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={formData.adminPassword}
+                    onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="••••••••"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Minimum 6 caractères</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Confirmer le mot de passe *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="••••••••"
+                  />
+                  {formData.confirmPassword && formData.adminPassword !== formData.confirmPassword && (
+                    <p className="text-xs text-red-400 mt-1">Les mots de passe ne correspondent pas</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Récapitulatif */}
+              <div className="bg-black/40 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-3">Récapitulatif de la création</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Type de commerce:</span>
+                    <span className="text-white font-medium">{selectedBusinessType?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Nom boutique:</span>
+                    <span className="text-white font-medium">{formData.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Admin:</span>
+                    <span className="text-white font-medium">{formData.adminName} ({formData.adminEmail})</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Plan d&apos;abonnement</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {subscriptionPlans.map((plan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, subscriptionPlan: plan.id })}
+                    className={`p-4 rounded-lg border transition-all duration-300 text-left ${
+                      formData.subscriptionPlan === plan.id
+                        ? 'border-orange-500 bg-orange-500/20 shadow-lg shadow-orange-500/30 ring-2 ring-orange-500/50'
+                        : 'border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-center mb-3">
+                      <div className={`text-2xl font-bold mb-1 ${
+                        plan.id === 'free' ? 'text-gray-400' : 'text-orange-500'
+                      }`}>
+                        {plan.price === 0 ? 'Gratuit' : `${plan.price.toLocaleString('fr-GA')} XAF/mois`}
+                      </div>
+                      {plan.id !== 'free' && (
+                        <div className="text-xs text-gray-400">
+                          {plan.id === 'premium' ? 'Économisez 15% avec annuel' : 'Contactez-nous pour entreprise'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm text-white">{plan.features[0]}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Package className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm text-white">{plan.features[1]}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <DollarSign className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm text-white">{plan.features[2]}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 space-y-1">
+                        {plan.features.slice(3).map((feature, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Récapitulatif final */}
+              <div className="bg-black/40 rounded-lg p-4 mt-6">
+                <h4 className="font-semibold text-white mb-3">Récapitulatif final</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Boutique:</span>
+                      <span className="text-white font-medium">{formData.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Type:</span>
+                      <span className="text-white font-medium">{selectedBusinessType?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Admin:</span>
+                      <span className="text-white font-medium">{formData.adminName}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Plan:</span>
+                      <span className="font-medium text-gray-400">Gratuit</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Coût mensuel:</span>
+                      <span className="text-gray-400 font-bold">0 XAF</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center pt-6 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+              disabled={currentStep === 1}
+              className="px-6 py-2 border border-white/20 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Précédent
+            </button>
+            
+            <div className="flex space-x-3">
+              {currentStep < 3 && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  Continuer
+                </button>
+              )}
+              
+              {currentStep === 3 && (
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  Créer la boutique
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

@@ -5,6 +5,8 @@ import { Search, Users, Grid, List, Mail, Phone, Edit, Trash2, TrendingUp, Arrow
 import { useTenant } from '@/contexts/TenantContext'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
+// Le layout sera automatiquement appliqué par le layout.tsx du dossier (dashboard)
+
 interface Customer {
   id: string
   name: string
@@ -163,9 +165,8 @@ export default function ClientsPage() {
   const totalDebt = customers.reduce((sum, c) => sum + c.totalDebt, 0)
 
   return (
-    <>
-      <div className="p-4">
-        {/* Header Mobile-First */}
+    <div className="p-4">
+      {/* Header Mobile-First */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-2xl md:text-3xl font-bold text-white">Gestion des Clients</h1>
@@ -535,6 +536,6 @@ export default function ClientsPage() {
       {/* Composants partagés */}
       {ConfirmDialogComponent}
       {NotificationComponent}
-    </>
+    </div>
   )
 }

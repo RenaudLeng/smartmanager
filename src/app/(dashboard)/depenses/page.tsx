@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, DollarSign, TrendingDown, Calendar, Edit, Trash2, Grid, List } from 'lucide-react'
 import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
 
+// Le layout sera automatiquement appliqué par le layout.tsx du dossier (dashboard)
+
 interface Expense {
   id: string
   description: string

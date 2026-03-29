@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Database, 
   Download, 
@@ -21,6 +21,8 @@ import {
   Plus,
   Save
 } from 'lucide-react'
+import { apiService } from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface BackupJob {
   id: string
@@ -65,121 +67,246 @@ export default function useBackupSystem({ tenants, onBackupAction }: BackupSyste
     cloudProvider: 'aws',
     notificationEmails: ['admin@smartmanager.com']
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
-  const [showSettings, setShowSettings] = useState(false)
-  const [showSchedule, setShowSchedule] = useState(false)
+  // Charger les jobs de backup depuis l'API
+  const loadBackupJobs = useCallback(async () => {
+    if (!user?.tenantId && user?.role !== 'super_admin') return
 
-  // Mock backup jobs
-  useEffect(() => {
-    const mockJobs: BackupJob[] = [
-      {
-        id: '1',
-        name: 'Backup Complet - Boutique Test',
-        type: 'full',
-        status: 'completed',
-        progress: 100,
-        startTime: new Date(Date.now() - 86400000),
-        endTime: new Date(Date.now() - 3600000),
-        size: 1250,
-        description: 'Sauvegarde complète de toutes les données',
-        tenantId: '1',
-        tenantName: 'Boutique Test'
-      },
-      {
-        id: '2',
-        name: 'Backup Incrémental - Bar Le Central',
-        type: 'incremental',
-        status: 'running',
-        progress: 65,
-        startTime: new Date(Date.now() - 7200000),
-        size: 450,
-        description: 'Sauvegarde des nouvelles transactions uniquement',
-        tenantId: '2',
-        tenantName: 'Bar Le Central'
-      },
-      {
-        id: '3',
-        name: 'Backup Differential - Restaurant Chez Mama',
-        type: 'differential',
-        status: 'pending',
-        progress: 0,
-        startTime: new Date(Date.now() - 172800000),
-        size: 0,
-        description: 'Comparaison avec la dernière sauvegarde',
-        tenantId: '3',
-        tenantName: 'Restaurant Chez Mama'
-      },
-      {
-        id: '4',
-        name: 'Backup Échoué - Salon de Beauté',
-        type: 'full',
-        status: 'failed',
-        progress: 100,
-        startTime: new Date(Date.now() - 259200000),
-        endTime: new Date(Date.now() - 172800000),
-        size: 0,
-        description: 'Échec de la sauvegarde automatique',
-        error: 'Erreur de connexion au serveur de stockage',
-        tenantId: '4',
-        tenantName: 'Salon de Beauté'
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await apiService.getBackups()
+      
+      if (response.success && response.data) {
+        const formattedJobs = response.data.map((job: any) => ({
+          id: job.id,
+          name: job.name,
+          description: job.description,
+          type: job.type,
+          status: job.status,
+          progress: job.progress || 0,
+          startTime: new Date(job.createdAt),
+          endTime: job.completedAt ? new Date(job.completedAt) : undefined,
+          size: job.size || 0,
+          tenantId: job.tenantId,
+          tenantName: job.tenant?.name || 'Système',
+          error: job.error
+        }))
+        
+        setBackupJobs(formattedJobs)
       }
-    ]
-
-    setBackupJobs(mockJobs)
-  }, [tenants])
-
-  const createBackupJob = (type: 'full' | 'incremental' | 'differential', tenantId?: string) => {
-    const newJob: BackupJob = {
-      id: Date.now().toString(),
-      name: `${type === 'full' ? 'Backup Complet' : type === 'incremental' ? 'Backup Incrémental' : 'Backup Differential'} - ${tenantId ? tenants.find(t => t.id === tenantId)?.name || 'Toutes les boutiques' : 'Sélection multiple'}`,
-      type,
-      status: 'pending',
-      progress: 0,
-      startTime: new Date(),
-      size: 0,
-      description: type === 'full' ? 'Sauvegarde complète de toutes les données' : 
-                type === 'incremental' ? 'Sauvegarde des changements depuis la dernière sauvegarde' : 
-                'Comparaison avec la dernière sauvegarde pour identifier les changements',
-      tenantId
+    } catch (err) {
+      console.error('Erreur lors du chargement des jobs de backup:', err)
+      setError('Impossible de charger les jobs de backup')
+    } finally {
+      setLoading(false)
     }
+  }, [user])
 
-    setBackupJobs(prev => [newJob, ...prev])
-    return newJob
+  // Charger les paramètres de backup
+  const loadBackupSettings = useCallback(async () => {
+    if (!user?.tenantId && user?.role !== 'super_admin') return
+
+    try {
+      const response = await apiService.getBackupSettings()
+      
+      if (response.success && response.data) {
+        setSettings(response.data)
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des paramètres:', err)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadBackupJobs()
+    loadBackupSettings()
+  }, [loadBackupJobs, loadBackupSettings])
+
+  const createBackupJob = async (type: 'full' | 'incremental' | 'differential', tenantId?: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await apiService.createBackup(type, tenantId)
+      
+      if (response.success && response.data) {
+        const newJob: BackupJob = {
+          id: response.data.id,
+          name: response.data.name,
+          description: response.data.description,
+          type,
+          status: 'pending',
+          progress: 0,
+          startTime: new Date(response.data.createdAt),
+          size: 0,
+          tenantId: response.data.tenantId,
+          tenantName: response.data.tenant?.name || 'Système'
+        }
+
+        setBackupJobs(prev => [newJob, ...prev])
+        
+        if (onBackupAction) {
+          onBackupAction('create', newJob.id)
+        }
+
+        return newJob
+      } else {
+        throw new Error(response.error || 'Erreur lors de la création du backup')
+      }
+    } catch (err) {
+      console.error('Erreur lors de la création du backup:', err)
+      setError('Erreur lors de la création du backup')
+      throw err
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const startBackup = (jobId: string) => {
-    setBackupJobs(prev => 
-      prev.map(job => 
-        job.id === jobId 
-          ? { ...job, status: 'running', startTime: new Date() }
-          : job
-      )
-    )
+  const startBackup = async (jobId: string) => {
+    try {
+      setLoading(true)
+      setError(null)
 
-    // Simuler l'exécution du backup
-    setTimeout(() => {
-      setBackupJobs(prev => 
-        prev.map(job => 
-          job.id === jobId 
-            ? { 
-                ...job, 
-                status: Math.random() > 0.5 ? 'completed' : 'failed',
-                progress: 100,
-                endTime: new Date(),
-                error: Math.random() > 0.5 ? undefined : 'Erreur réseau'
-              }
-            : job
+      const response = await apiService.startBackup(jobId)
+      
+      if (response.success) {
+        setBackupJobs(prev => 
+          prev.map(job => 
+            job.id === jobId 
+              ? { ...job, status: 'running', startTime: new Date() }
+              : job
+          )
         )
-      )
 
-      if (onBackupAction) {
-        onBackupAction('start', jobId)
+        if (onBackupAction) {
+          onBackupAction('start', jobId)
+        }
+
+        // Démarrer le polling pour suivre la progression
+        pollBackupProgress(jobId)
+      } else {
+        throw new Error(response.error || 'Erreur lors du démarrage du backup')
+      }
+    } catch (err) {
+      console.error('Erreur lors du démarrage du backup:', err)
+      setError('Erreur lors du démarrage du backup')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pollBackupProgress = async (jobId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await apiService.getBackupStatus(jobId)
+        
+        if (response.success && response.data) {
+          const updatedJob = response.data
+          
+          setBackupJobs(prev => 
+            prev.map(job => 
+              job.id === jobId 
+                ? { 
+                    ...job, 
+                    status: updatedJob.status,
+                    progress: updatedJob.progress || 0,
+                    endTime: updatedJob.completedAt ? new Date(updatedJob.completedAt) : undefined,
+                    size: updatedJob.size || 0,
+                    error: updatedJob.error
+                  }
+                : job
+            )
+          )
+
+          // Arrêter le polling si le job est terminé
+          if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
+            clearInterval(pollInterval)
+            
+            if (onBackupAction) {
+              onBackupAction('complete', jobId)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erreur lors du polling:', err)
+        clearInterval(pollInterval)
       }
     }, 2000)
+
+    // Arrêter le polling après 5 minutes maximum
+    setTimeout(() => {
+      clearInterval(pollInterval)
+    }, 300000)
   }
 
-  const deleteBackupJob = (jobId: string) => {
-    setBackupJobs(prev => prev.filter(job => job.id !== jobId))
+  const deleteBackupJob = async (jobId: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await apiService.deleteBackup(jobId)
+      
+      if (response.success) {
+        setBackupJobs(prev => prev.filter(job => job.id !== jobId))
+        
+        if (onBackupAction) {
+          onBackupAction('delete', jobId)
+        }
+      } else {
+        throw new Error(response.error || 'Erreur lors de la suppression du backup')
+      }
+    } catch (err) {
+      console.error('Erreur lors de la suppression du backup:', err)
+      setError('Erreur lors de la suppression du backup')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateBackupSettings = async (newSettings: Partial<BackupSettings>) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await apiService.updateBackupSettings(newSettings)
+      
+      if (response.success) {
+        setSettings(prev => ({ ...prev, ...newSettings }))
+      } else {
+        throw new Error(response.error || 'Erreur lors de la mise à jour des paramètres')
+      }
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour des paramètres:', err)
+      setError('Erreur lors de la mise à jour des paramètres')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const downloadBackup = async (jobId: string) => {
+    try {
+      const response = await apiService.downloadBackup(jobId)
+      
+      if (response.success && response.data?.downloadUrl) {
+        // Créer un lien de téléchargement
+        const link = document.createElement('a')
+        link.href = response.data.downloadUrl
+        link.download = `backup-${jobId}.zip`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        throw new Error(response.error || 'Erreur lors du téléchargement')
+      }
+    } catch (err) {
+      console.error('Erreur lors du téléchargement:', err)
+      setError('Erreur lors du téléchargement du backup')
+    }
   }
 
   const getStatusColor = (status: string) => {

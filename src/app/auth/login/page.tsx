@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
 
 export default function LoginPage() {
@@ -10,40 +11,48 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
     // Vérifier si une configuration existe déjà
     const user = localStorage.getItem('user')
     if (user) {
-      router.push('/dashboard')
+      try {
+        const userData = JSON.parse(user)
+        console.log('👤 Utilisateur trouvé:', userData)
+        setCurrentUser(userData)
+        // Ne pas rediriger automatiquement - laisser l'utilisateur choisir
+        // router.push('/dashboard')
+      } catch (error) {
+        console.error('Erreur parsing user:', error)
+        localStorage.removeItem('user')
+      }
     }
   }, [router])
 
-  const handleQuickLogin = () => {
-    setEmail('test@smartmanager.com')
-    setPassword('password123')
-    setTimeout(async () => {
+  const handleLogout = () => {
+    console.log('🚪 Déconnexion depuis la page de login')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.reload()
+  }
+
+  const handleContinue = () => {
+    const user = localStorage.getItem('user')
+    if (user) {
       try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'test@smartmanager.com', password: 'password123' })
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          localStorage.setItem('token', data.token)
-          localStorage.setItem('user', JSON.stringify(data.user))
-          router.push('/dashboard')
+        const userData = JSON.parse(user)
+        if (userData.role === 'super_admin') {
+          window.location.href = '/superadmin'
         } else {
-          setError('Erreur lors de la connexion rapide')
+          router.push('/dashboard')
         }
       } catch (error) {
-        console.error('Erreur de connexion rapide:', error)
-        setError('Erreur de connexion')
+        console.error('Erreur parsing user:', error)
+        localStorage.removeItem('user')
       }
-    }, 500)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,27 +60,50 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    console.log('🔐 Tentative de connexion avec:', { email, password: '***' })
+    console.log('📝 Formulaire soumis - bouton cliqué')
+
     try {
       // Authentification via API réelle
+      console.log('🌐 Appel API /api/auth/login...')
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
 
+      console.log('📡 Réponse API brute:', response)
+      console.log('📡 Status:', response.status, response.statusText)
+
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Connexion réussie - données reçues:', data)
+        
         localStorage.setItem('token', data.token)
         localStorage.setItem('user', JSON.stringify(data.user))
-        router.push('/dashboard')
+        console.log('💾 Données stockées dans localStorage')
+        
+        // FORCE REDIRECTION SUPERADMIN
+        if (data.user.role === 'super_admin') {
+          console.log('👑 SUPERADMIN DETECTÉ - Redirection forcée vers /superadmin')
+          // Forcer la redirection immédiate
+          window.location.href = '/superadmin'
+          return
+        } else {
+          console.log('🔄 Redirection vers /dashboard...')
+          router.push('/dashboard')
+        }
       } else {
+        console.log('❌ Réponse API non-OK, lecture du body...')
         const errorData = await response.json()
+        console.log('❌ Erreur API:', errorData)
         setError(errorData.error || 'Email ou mot de passe incorrect')
       }
     } catch (error) {
-      console.error('Erreur de connexion:', error)
+      console.error('💥 Erreur de connexion complète:', error)
       setError('Erreur de connexion au serveur')
     } finally {
+      console.log('🏁 Fin du processus de connexion')
       setLoading(false)
     }
   }
@@ -82,32 +114,53 @@ export default function LoginPage() {
         <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-8 shadow-2xl">
           <div className="text-center mb-4">
             {/* Logo */}
-            <img 
+            <Image 
               src="/logo.png" 
               alt="SmartManager" 
+              width={128}
+              height={128}
               className="h-32 w-auto object-contain mx-auto mb-2"
             />
             
-            <h1 className="text-4xl font-black text-white mb-2 tracking-wide drop-shadow-lg">SmartManager</h1>
+            <h1 className="text-4xl font-black text-white mb-2 tracking-wide drop-shadow-lg">
+              <span className="text-orange-500">Smart</span><span className="text-green-500">Manager</span>
+            </h1>
             <p className="text-gray-400">Gestion intelligente pour votre commerce</p>
           </div>
 
-          {/* Quick Login Button */}
-          <div className="mb-6">
-            <button
-              onClick={handleQuickLogin}
-              className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-lg shadow-orange-500/25"
-            >
-              Connexion Rapide (Test)
-            </button>
-            <p className="text-xs text-gray-400 mt-2 text-center">
-              Utilisateur: test@smartmanager.com | Mot de passe: password123
-            </p>
-          </div>
-
-          <div className="text-center mb-6">
-            <span className="text-gray-500">ou</span>
-          </div>
+          {/* Section utilisateur déjà connecté */}
+          {currentUser && (
+            <div className="bg-blue-900/30 backdrop-blur-sm border border-blue-500/30 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-blue-300 text-sm font-medium">Déjà connecté</p>
+                  <p className="text-white font-semibold">{currentUser.name}</p>
+                  <p className="text-gray-400 text-sm">{currentUser.email}</p>
+                </div>
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  currentUser.role === 'super_admin' 
+                    ? 'bg-orange-500/20 text-orange-400' 
+                    : 'bg-green-500/20 text-green-400'
+                }`}>
+                  {currentUser.role === 'super_admin' ? 'SuperAdmin' : 'Admin'}
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleContinue}
+                  className="flex-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Continuer
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Se déconnecter
+                </button>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -119,6 +172,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
                 className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 placeholder="votre@email.com"
                 required
@@ -135,8 +189,9 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent pr-12"
-                  placeholder="•••••••••"
+                  placeholder="••••••••"
                   required
                 />
                 <button

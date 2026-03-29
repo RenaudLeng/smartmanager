@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
+import { useAuth } from '@/contexts/AuthContext'
+import Image from 'next/image'
 import { 
   LayoutDashboard, 
   DollarSign, 
@@ -36,11 +38,27 @@ interface NavigationProps {
   onCloseMobile?: () => void
 }
 
-export default function Navigation({ user, isMobile = false, onCloseMobile }: NavigationProps) {
+export default function Navigation({ isMobile, onCloseMobile }: NavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const tenantData = useTenant()
-  const businessFeatures = tenantData.getBusinessFeatures()
+  const { tenant } = useTenant()
+  const { logout, user } = useAuth()
+  
+  const businessFeatures = tenant ? {
+    allowsDebt: false,
+    allowsDelivery: false,
+    allowsTableService: false,
+    requiresTableNumber: false,
+    allowsFlashCustomers: false,
+    allowsTicketPrinting: false
+  } : {
+    allowsDebt: false,
+    allowsDelivery: false,
+    allowsTableService: false,
+    requiresTableNumber: false,
+    allowsFlashCustomers: false,
+    allowsTicketPrinting: false
+  }
 
   const navigation = [
     {
@@ -163,9 +181,7 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
   })
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    router.push('/')
+    logout()
   }
 
   const handleNavigation = (href: string) => {
@@ -188,32 +204,32 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
       bg-black/90 backdrop-blur-xl border-r border-orange-900/20 
       flex flex-col h-full
     `}>
-      {/* Header */}
+      {/* Header avec logo */}
       <div className="p-6 border-b border-orange-900/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            {/* Logo */}
-            <img 
-              src="/logo.png" 
-              alt="SmartManager" 
-              className="h-16 w-auto object-contain"
-            />
-            <div>
-              <h1 className="text-xl font-bold text-white">SmartManager</h1>
-              <p className="text-sm text-white">{user?.tenant?.name || 'Boutique Test'}</p>
-            </div>
+        <div className="flex items-center space-x-3">
+          {/* Logo */}
+          <Image 
+            src="/logo.png" 
+            alt="SmartManager" 
+            width={64}
+            height={64}
+            className="h-16 w-auto object-contain"
+          />
+          <div>
+            <h1 className="text-xl font-bold text-white">SmartManager</h1>
+            <p className="text-sm text-white">{user?.role === 'super_admin' ? 'SuperAdmin' : (tenant?.name || 'Boutique Test')}</p>
           </div>
-          
-          {/* Mobile Close Button */}
-          {isMobile && onCloseMobile && (
-            <button
-              onClick={onCloseMobile}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors lg:hidden"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
         </div>
+        
+        {/* Mobile Close Button */}
+        {isMobile && onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            className="mt-4 w-full p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors lg:hidden"
+          >
+            <X className="h-5 w-5 mx-auto" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Items */}
@@ -240,28 +256,14 @@ export default function Navigation({ user, isMobile = false, onCloseMobile }: Na
         </ul>
       </div>
 
-      {/* User Section */}
-      <div className="p-4 border-t border-orange-900/20">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/25">
-            <span className="text-white font-bold">
-              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">
-              {user?.name || 'Utilisateur Test'}
-            </p>
-            <p className="text-xs text-gray-400 truncate">
-              {user?.email || 'test@smartmanager.com'}
-            </p>
-          </div>
-        </div>
+      {/* Bouton de déconnexion - en bas */}
+      <div className="p-4 border-t border-orange-900/20 bg-black/40">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm border border-red-500/30 transition-all duration-200"
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm border border-red-500/30 transition-all duration-200 group"
+          title="Déconnexion"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
           <span>Déconnexion</span>
         </button>
       </div>

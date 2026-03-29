@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { 
   User, Store, Bell, Shield, Palette, Smartphone, Save, Eye, EyeOff, Moon, Sun, Mail, ArrowLeft, Users, Key, Lock, Plus, Edit2, Trash2, X 
 } from 'lucide-react'
-import { useTenant } from '@/contexts/TenantContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface AppUser {
   id: string
@@ -65,10 +65,7 @@ interface TenantSettings {
 }
 
 export default function SettingsPage() {
-  const tenantData = useTenant()
-  const businessFeatures = tenantData.getBusinessFeatures()
-  const businessType = tenantData.getBusinessLabel()
-  
+  const { token } = useAuth()
   const [activeTab, setActiveTab] = useState('user')
   const [showPassword, setShowPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -218,14 +215,16 @@ export default function SettingsPage() {
         })
         
         if (response.ok) {
-          alert('✅ Toutes les données ont été réinitialisées avec succès !\n\nLa page va maintenant se recharger.')
-          window.location.href = '/'
+          showNotification('success', '✅ Toutes les données ont été réinitialisées avec succès !')
+          setTimeout(() => {
+            window.location.href = '/'
+          }, 2000)
         } else {
-          alert('❌ Erreur lors de la réinitialisation des données')
+          showNotification('error', '❌ Erreur lors de la réinitialisation des données')
         }
       } catch (error) {
         console.error('Erreur:', error)
-        alert('❌ Erreur lors de la réinitialisation')
+        showNotification('error', '❌ Erreur lors de la réinitialisation')
       }
     }
   }
@@ -246,17 +245,17 @@ export default function SettingsPage() {
     setConfirmPassword('')
   }
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     console.log('🔥 BOUTON ADD USER FONCTIONNE!')
     console.log('Nouvel utilisateur :', newUser)
+    
     if (!newUser.name || !newUser.email) {
+      console.log('Erreur : champs obligatoires manquants')
+      showNotification('error', 'Veuillez remplir tous les champs obligatoires')
+      return
+    }
 
-      if (!newUser.name || !newUser.email) {
-        console.log('Erreur : champs obligatoires manquants')
-        showNotification('error', 'Veuillez remplir tous les champs obligatoires')
-        return
-      }
-
+    try {
       const user = {
         name: newUser.name!,
         email: newUser.email!,
@@ -578,7 +577,7 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                       <div>
                         <p className="text-white font-medium">Gestion des dettes clients</p>
-                        <p className="text-gray-400 text-xs">Permet d'enregistrer les dettes des clients fidèles</p>
+                        <p className="text-gray-400 text-xs">Permet d&apos;enregistrer les dettes des clients fidèles</p>
                       </div>
                       <input
                         type="checkbox"

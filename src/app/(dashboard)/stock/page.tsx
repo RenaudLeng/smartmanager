@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Package, Search, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
 import { useOptimizedData } from '@/hooks/useOptimizedData'
+import { useTenant } from '@/contexts/TenantContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { getCategoriesForBusinessType } from '@/config/businessCategories'
 import OptimizedLoading from '@/components/ui/OptimizedLoading'
+import { useToastNotification, ToastNotification } from '@/components/ui/ToastNotification'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface Product {
   id: string
@@ -25,13 +31,34 @@ interface Product {
 
 export default function StockPage() {
   const { state: financialState } = useFinancial()
+  const { tenant } = useTenant()
+  const { user, token } = useAuth()
+  const router = useRouter()
+  
+  // Rediriger vers login si non authentifié
+  useEffect(() => {
+    if (!token || !user) {
+      router.push('/')
+    }
+  }, [token, user, router])
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [categories, setCategories] = useState<Array<{id: string, name: string}>>([])
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
+  
+  // États pour les notifications et modales
+  const { success, error: showError, info, notifications, removeNotification } = useToastNotification()
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {})
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false)
+  const [stockValue, setStockValue] = useState('')
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
@@ -40,7 +67,7 @@ export default function StockPage() {
     profitability: '',
     stock: '',
     minStock: '',
-    category: 'Alimentaire',
+    category: tenant ? getCategoriesForBusinessType(tenant.businessType)[0]?.name || 'Alimentaire' : 'Alimentaire',
     supplier: '',
     imageFile: null as File | null,
     imagePreview: '',
@@ -50,67 +77,57 @@ export default function StockPage() {
   })
 
   // Hook optimisé pour charger les produits avec cache
-  const { data: productsData, loading, refetch } = useOptimizedData<Product[]>({
+  const { data: productsData, loading: productsLoading, refetch } = useOptimizedData<Product[]>({
     fetchFn: async () => {
       try {
         const token = localStorage.getItem('token')
+        console.log('Token from localStorage:', token ? 'exists' : 'missing')
         
         if (!token) {
           console.log('Utilisateur non connecté - utilisation des données par défaut')
           return []
         }
         
+        console.log('Fetching products with token:', token.substring(0, 20) + '...')
         const response = await fetch('/api/products', {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${token}`
           }
         })
         
+        console.log('Response status:', response.status)
+        
         if (!response.ok) {
-          console.warn('Erreur de chargement des produits:', response.status, response.statusText)
-          // Retourner un tableau vide au lieu de lancer une erreur
-          return []
+          throw new Error(`Erreur HTTP: ${response.status}`)
         }
         
-        const data = await response.json()
+        const result = await response.json()
+        console.log('API Response:', result)
         
-        // Transformer les données de l'API pour correspondre à l'interface Product
-        return (data.products || []).map((product: {
-        id: string
-        name: string
-        description?: string
-        barcode?: string
-        purchasePrice: number
-        sellingPrice: number
-        quantity: number
-        minStock?: number
-        categoryId: string
-        supplierId?: string
-        expirationDate?: string
-        createdAt: string
-        updatedAt: string
-        category: {
+        // Transformation simple et robuste des données
+        return result.data?.map((product: {
           id: string
           name: string
-        }
-        supplier?: {
-          id: string
-          name: string
-        }
-      }) => ({
-        id: product.id,
-        name: product.name,
-        price: product.sellingPrice,
-        purchasePrice: product.purchasePrice,
-        stock: product.quantity || 0,
-        minStock: product.minStock || 0,
-        category: product.category?.name || 'Non catégorisé',
-        supplier: product.supplier?.name || 'Non spécifié',
-        status: product.quantity === 0 ? 'out_of_stock' : 
-                product.quantity <= (product.minStock || 0) ? 'low_stock' : 'in_stock',
-        lastUpdated: product.updatedAt
-      })) || []
+          sellingPrice?: number
+          purchasePrice?: number
+          quantity?: number
+          minStock?: number
+          category?: { name?: string }
+          supplier?: { name?: string }
+          updatedAt?: string
+        }) => ({
+          id: product.id,
+          name: product.name,
+          price: product.sellingPrice || 0,
+          purchasePrice: product.purchasePrice || 0,
+          stock: product.quantity || 0,
+          minStock: product.minStock || 0,
+          category: product.category?.name || 'Non catégorisé',
+          supplier: product.supplier?.name || 'Non spécifié',
+          status: (product.quantity || 0) === 0 ? 'out_of_stock' : 
+                  (product.quantity || 0) <= (product.minStock || 0) ? 'low_stock' : 'in_stock',
+          lastUpdated: product.updatedAt || new Date().toISOString()
+        })) || []
       } catch (error) {
         console.error('Erreur lors du chargement des produits:', error)
         return []
@@ -120,22 +137,89 @@ export default function StockPage() {
     staleTime: 300000 // 5 minutes
   })
 
-  const products = useMemo(() => productsData || [], [productsData])
+  const products = useMemo(() => {
+  console.log('Products data:', productsData)
+  return productsData || []
+}, [productsData])
 
   // Memoization pour les catégories et filtres
-  const categories = useMemo(() => 
+  const categoryNames = useMemo(() => 
     ['all', ...new Set(products.map(p => p.category))], 
     [products]
   )
 
-  const filteredProducts = useMemo(() => 
-    products.filter(product => {
+  const filteredProducts = useMemo(() => {
+    const filtered = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
       return matchesSearch && matchesCategory
-    }), 
+    })
+    console.log('Filtered products:', filtered.length, 'from', products.length, 'products')
+    console.log('Search term:', searchTerm, 'Selected category:', selectedCategory)
+    return filtered
+  }, 
     [products, searchTerm, selectedCategory]
   )
+
+  // Charger les catégories depuis l'API ou créer les catégories par défaut selon le business type
+  const loadCategories = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/categories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const existingCategories = data.data || []
+        
+        // Si aucune catégorie n'existe, créer les catégories par défaut selon le business type
+        if (existingCategories.length === 0 && tenant) {
+          const defaultCategories = getCategoriesForBusinessType(tenant.businessType)
+          
+          // Créer les catégories par défaut
+          for (const category of defaultCategories) {
+            const createResponse = await fetch('/api/categories', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: category.name,
+                description: category.description
+              })
+            })
+            
+            if (createResponse.ok) {
+              const createdCategory = await createResponse.json()
+              existingCategories.push(createdCategory.data)
+            }
+          }
+        }
+        
+        setCategories(existingCategories)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des catégories:', error)
+      
+      // En cas d'erreur, utiliser les catégories par défaut selon le business type
+      if (tenant) {
+        const defaultCategories = getCategoriesForBusinessType(tenant.businessType)
+        setCategories(defaultCategories.map(cat => ({ 
+          id: `default-${cat.name}`, 
+          name: cat.name 
+        })))
+      }
+    }
+  }, [tenant])
+
+  // Charger les catégories au montage du composant et quand le tenant change
+  useEffect(() => {
+    loadCategories()
+  }, [tenant, loadCategories])
 
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.stock || !newProduct.minStock) {
@@ -145,7 +229,7 @@ export default function StockPage() {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        alert('Vous devez être connecté pour ajouter un produit')
+        showError('Erreur d\'authentification', 'Vous devez être connecté pour ajouter un produit')
         return
       }
 
@@ -184,16 +268,26 @@ export default function StockPage() {
       const margin = selling - purchase
       const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
 
+      // Trouver l'ID de catégorie correspondant au nom
+      const selectedCategory = categories.find(cat => cat.name === newProduct.category)
+      const categoryId = selectedCategory ? selectedCategory.id : null
+
+      if (!categoryId) {
+        showError('Erreur de validation', 'Veuillez sélectionner une catégorie valide')
+        return
+      }
+
       const productData = {
         name: newProduct.name,
-        description: `Produit ajouté via le formulaire`,
-        sellingPrice: selling,
+        description: `${newProduct.name} - ${newProduct.category}`,
+        barcode: '',
         purchasePrice: purchase,
+        sellingPrice: selling,
         margin,
         profitability,
         quantity: parseInt(newProduct.stock),
         minStock: parseInt(newProduct.minStock),
-        categoryId: '', // Sera mis à jour après récupération des catégories
+        categoryId: categoryId, // Utiliser l'ID réel de la catégorie
         supplierId: null
       }
 
@@ -252,11 +346,11 @@ export default function StockPage() {
       setIsEditMode(false)
       setShowAddModal(false)
       
-      alert('Produit ajouté avec succès !')
+      success('Produit ajouté', 'Le produit a été ajouté avec succès !')
 
     } catch (error) {
       console.error('Erreur lors de l\'ajout du produit:', error)
-      alert('Erreur lors de l\'ajout du produit: ' + (error as Error).message)
+      showError('Erreur', 'Erreur lors de l\'ajout du produit: ' + (error as Error).message)
     }
   }
 
@@ -300,80 +394,73 @@ export default function StockPage() {
         restockCost: ''
       })
       setIsEditMode(true)
-      setShowDetailsModal(false)
       setShowAddModal(true)
     }
   }
 
-  const handleAdjustStock = async () => {
+  const handleAdjustStock = () => {
     if (selectedProduct) {
-      const newStock = prompt(`Nouveau stock pour ${selectedProduct.name}:`, selectedProduct.stock.toString())
-      if (newStock !== null && !isNaN(parseInt(newStock))) {
-        try {
-          const token = localStorage.getItem('token')
-          if (!token) {
-            alert('Vous devez être connecté pour modifier le stock')
-            return
-          }
-
-          const updatedStock = parseInt(newStock)
-          
-          // Envoyer la mise à jour à l'API
-          const response = await fetch(`/api/products/${selectedProduct.id}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              quantity: updatedStock
-            })
-          })
-
-          if (!response.ok) {
-            let errorMessage = 'Erreur lors de la mise à jour du stock'
-            
-            if (response.status === 401) {
-              errorMessage = 'Vous devez être connecté pour modifier le stock'
-            } else {
-              try {
-                const error = await response.json()
-                errorMessage = error.error || errorMessage
-              } catch (parseError) {
-                errorMessage = `Erreur ${response.status}: ${response.statusText}`
-              }
-            }
-            
-            throw new Error(errorMessage)
-          }
-
-          // Rafraîchir les données
-          refetch()
-          setShowDetailsModal(false)
-          setSelectedProduct(null)
-          
-          alert('Stock mis à jour avec succès !')
-
-        } catch (error) {
-          console.error('Erreur lors de la mise à jour du stock:', error)
-          alert('Erreur lors de la mise à jour du stock: ' + (error as Error).message)
-        }
-      }
+      setStockValue(selectedProduct.stock.toString())
+      setIsStockModalOpen(true)
     }
   }
 
-  const handleDeleteProduct = async () => {
+  const confirmStockAdjustment = async () => {
+    if (!selectedProduct || stockValue === '') return
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        showError('Erreur d\'authentification', 'Vous devez être connecté pour modifier le stock')
+        return
+      }
+
+      const updatedStock = parseInt(stockValue)
+      
+      // Envoyer la mise à jour à l'API
+      const response = await fetch(`/api/products/${selectedProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quantity: updatedStock })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || `Erreur HTTP: ${response.status}`
+        throw new Error(errorMessage)
+      }
+
+      // Rafraîchir les données
+      refetch()
+      setShowDetailsModal(false)
+      setSelectedProduct(null)
+      setIsStockModalOpen(false)
+      
+      success('Stock mis à jour', 'Le stock a été mis à jour avec succès !')
+
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du stock:', error)
+      showError('Erreur', 'Erreur lors de la mise à jour du stock: ' + (error as Error).message)
+    }
+  }
+
+  const handleDeleteProduct = () => {
     if (selectedProduct) {
-      if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedProduct.name}" ?`)) {
+      setConfirmTitle('Supprimer le produit')
+      setConfirmMessage(`Êtes-vous sûr de vouloir supprimer "${selectedProduct.name}" ?`)
+      setConfirmAction(async () => {
         try {
           const token = localStorage.getItem('token')
           if (!token) {
-            alert('Vous devez être connecté pour supprimer un produit')
+            showError('Erreur d\'authentification', 'Vous devez être connecté pour supprimer un produit')
             return
           }
 
           // Envoyer la suppression à l'API
-          const response = await fetch(`/api/products/${selectedProduct.id}`, {
+          const response = await fetch(`/api/products/${selectedProduct!.id}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -390,7 +477,7 @@ export default function StockPage() {
               try {
                 const error = await response.json()
                 errorMessage = error.error || errorMessage
-              } catch (parseError) {
+              } catch {
                 errorMessage = `Erreur ${response.status}: ${response.statusText}`
               }
             }
@@ -403,13 +490,14 @@ export default function StockPage() {
           setShowDetailsModal(false)
           setSelectedProduct(null)
           
-          alert('Produit supprimé avec succès !')
+          success('Produit supprimé', 'Le produit a été supprimé avec succès !')
 
         } catch (error) {
           console.error('Erreur lors de la suppression du produit:', error)
-          alert('Erreur lors de la suppression du produit: ' + (error as Error).message)
+          showError('Erreur', 'Erreur lors de la suppression du produit: ' + (error as Error).message)
         }
-      }
+      })
+      setIsConfirmModalOpen(true)
     }
   }
 
@@ -512,7 +600,7 @@ export default function StockPage() {
                 className="px-4 py-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="all">Toutes catégories</option>
-                {categories.filter(cat => cat !== 'all').map(category => (
+                {categoryNames.filter(cat => cat !== 'all').map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
               </select>
@@ -572,7 +660,7 @@ export default function StockPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {loading ? (
+                  {productsLoading ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-8">
                         <OptimizedLoading size="lg" message="Chargement des produits..." showSkeleton skeletonLines={5} />
@@ -940,11 +1028,25 @@ export default function StockPage() {
                     onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                     className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
-                    <option value="Alimentaire">Alimentaire</option>
-                    <option value="Boissons">Boissons</option>
-                    <option value="Boulangerie">Boulangerie</option>
-                    <option value="Hygiène">Hygiène</option>
-                    <option value="Autre">Autre</option>
+                    {categories.length > 0 ? (
+                      categories.map(category => (
+                        <option key={category.id} value={category.name}>{category.name}</option>
+                      ))
+                    ) : tenant ? (
+                      // Afficher les catégories par défaut selon le business type
+                      getCategoriesForBusinessType(tenant.businessType).map(category => (
+                        <option key={category.name} value={category.name}>{category.name}</option>
+                      ))
+                    ) : (
+                      // Fallback si pas de tenant
+                      <>
+                        <option value="Alimentaire">Alimentaire</option>
+                        <option value="Boissons">Boissons</option>
+                        <option value="Boulangerie">Boulangerie</option>
+                        <option value="Hygiène">Hygiène</option>
+                        <option value="Autre">Autre</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -1057,6 +1159,58 @@ export default function StockPage() {
             </div>
           </div>
         )}
-      </div>
+      
+      {/* Toast Notifications */}
+      <ToastNotification notifications={notifications} onRemove={removeNotification} />
+      
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmAction}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText="Confirmer"
+        cancelText="Annuler"
+        type="danger"
+      />
+      
+      {/* Stock Adjustment Modal */}
+      {isStockModalOpen && selectedProduct && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-white/10 rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Ajuster le stock - {selectedProduct.name}
+            </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Nouveau stock
+              </label>
+              <input
+                type="number"
+                value={stockValue}
+                onChange={(e) => setStockValue(e.target.value)}
+                className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="Entrez la nouvelle quantité"
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsStockModalOpen(false)}
+                className="px-4 py-2 text-gray-300 bg-black/40 border border-white/20 rounded-lg hover:bg-black/60 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmStockAdjustment}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

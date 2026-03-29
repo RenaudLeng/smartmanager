@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { BUSINESS_TYPES_CONFIG } from '@/types/index'
-
-const prisma = new PrismaClient()
+import { hashPassword } from '@/lib/auth'
 
 // Schémas de validation
 const createTenantSchema = z.object({
@@ -14,7 +13,16 @@ const createTenantSchema = z.object({
   address: z.string().optional(),
   adminName: z.string().min(2, 'Le nom de l\'admin doit contenir au moins 2 caractères'),
   adminEmail: z.string().email('Email admin invalide'),
+  adminPassword: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
   subscriptionPlan: z.enum(['free', 'premium', 'enterprise']),
+  features: z.object({
+    debtManagement: z.boolean().default(false),
+    delivery: z.boolean().default(false),
+    tableService: z.boolean().default(false),
+    tableNumberRequired: z.boolean().default(false),
+    flashCustomers: z.boolean().default(false),
+    ticketPrinting: z.boolean().default(false)
+  }).optional(),
   businessConfig: z.object({
     categories: z.array(z.object({
       name: z.string(),
@@ -83,85 +91,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Données reçues:', JSON.stringify(body, null, 2))
     const validatedData = createTenantSchema.parse(body)
+    console.log('Données validées:', JSON.stringify(validatedData, null, 2))
 
     // Définir les features selon le business type
-    const getBusinessFeatures = (businessType: string) => {
-      const featuresMap = {
-        retail: {
-          allowsDebt: false,
-          allowsDelivery: false,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: true
-        },
-        restaurant: {
-          allowsDebt: true,
-          allowsDelivery: true,
-          allowsTableService: true,
-          requiresTableNumber: true,
-          allowsFlashCustomers: true,
-          allowsTicketPrinting: true
-        },
-        bar: {
-          allowsDebt: true,
-          allowsDelivery: false,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: true,
-          allowsTicketPrinting: true
-        },
-        pharmacy: {
-          allowsDebt: false,
-          allowsDelivery: true,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: true
-        },
-        supermarket: {
-          allowsDebt: false,
-          allowsDelivery: true,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: true
-        },
-        hair_salon: {
-          allowsDebt: true,
-          allowsDelivery: false,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: true,
-          allowsTicketPrinting: true
-        },
-        grocery: {
-          allowsDebt: false,
-          allowsDelivery: false,
-          allowsTableService: false,
-          requiresTableNumber: false,
-          allowsFlashCustomers: false,
-          allowsTicketPrinting: true
-        },
-        bar_restaurant: {
-          allowsDebt: true,
-          allowsDelivery: true,
-          allowsTableService: true,
-          requiresTableNumber: true,
-          allowsFlashCustomers: true,
-          allowsTicketPrinting: true
-        }
-      }
-      return featuresMap[businessType as keyof typeof featuresMap] || featuresMap.retail
-    }
+    // Note: Cette fonction peut être utilisée plus tard pour des configurations avancées
 
     // Créer le tenant avec les features dynamiques
     const tenant = await prisma.tenant.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        address: validatedData.address,
+        businessType: validatedData.businessType,
         status: 'active',
-        features: JSON.stringify(getBusinessFeatures(validatedData.businessType))
+        features: validatedData.features ? JSON.stringify(validatedData.features) : null
       }
     })
 
@@ -173,7 +119,7 @@ export async function POST(request: NextRequest) {
         role: 'admin',
         tenantId: tenant.id,
         isActive: true,
-        password: 'tempPassword123', // À générer aléatoirement
+        password: await hashPassword(validatedData.adminPassword), // Utiliser le mot de passe fourni
         lastLogin: new Date()
       }
     })
@@ -181,7 +127,8 @@ export async function POST(request: NextRequest) {
     // Utiliser la configuration du business type si aucune configuration personnalisée n'est fournie
     const businessConfig = validatedData.businessConfig || BUSINESS_TYPES_CONFIG[validatedData.businessType]
 
-    // Créer les catégories par défaut
+    // Créer les catégories par défaut et récupérer leurs IDs
+    let categoryMap: Record<string, string> = {}
     if (businessConfig?.categories) {
       await prisma.category.createMany({
         data: businessConfig.categories.map(cat => ({
@@ -189,23 +136,55 @@ export async function POST(request: NextRequest) {
           tenantId: tenant.id
         }))
       })
+
+      // Récupérer les catégories créées avec leurs IDs
+      const categories = await prisma.category.findMany({
+        where: {
+          tenantId: tenant.id,
+          name: {
+            in: businessConfig.categories.map(cat => cat.name)
+          }
+        }
+      })
+
+      // Créer un mapping nom -> ID
+      categoryMap = categories.reduce((acc, cat) => {
+        acc[cat.name] = cat.id
+        return acc
+      }, {} as Record<string, string>)
     }
 
-    // Créer les produits par défaut
+    // Créer les produits par défaut en utilisant les IDs de catégories réels
     if (businessConfig?.defaultProducts) {
-      await prisma.product.createMany({
-        data: businessConfig.defaultProducts.map(product => ({
-          name: product.name,
-          description: product.description,
-          purchasePrice: ('sellingPrice' in product ? product.sellingPrice : product.price) * 0.7, // 70% du prix de vente
-          sellingPrice: 'sellingPrice' in product ? product.sellingPrice : product.price,
-          categoryId: ('sellingPrice' in product ? product.category : product.category), // Note: devrait être categoryId
-          tenantId: tenant.id,
-          quantity: 0,
-          minStock: 0,
-          isActive: true
-        }))
-      })
+      const validProducts = businessConfig.defaultProducts
+        .map(product => {
+          const categoryName = 'sellingPrice' in product ? product.category : product.category
+          const categoryId = categoryMap[categoryName]
+          
+          if (!categoryId) {
+            console.warn(`Catégorie "${categoryName}" non trouvée pour le produit "${product.name}"`)
+            return null
+          }
+
+          return {
+            name: product.name,
+            description: product.description,
+            purchasePrice: ('sellingPrice' in product ? product.sellingPrice : product.price) * 0.7,
+            sellingPrice: 'sellingPrice' in product ? product.sellingPrice : product.price,
+            categoryId: categoryId,
+            tenantId: tenant.id,
+            quantity: 0,
+            minStock: 0,
+            isActive: true
+          }
+        })
+        .filter((product): product is NonNullable<typeof product> => product !== null)
+
+      if (validProducts.length > 0) {
+        await prisma.product.createMany({
+          data: validProducts
+        })
+      }
     }
 
     // Définir les fonctionnalités selon le plan

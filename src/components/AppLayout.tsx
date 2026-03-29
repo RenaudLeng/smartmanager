@@ -4,17 +4,18 @@ import { useEffect, useState } from 'react'
 import Navigation from './Navigation'
 import { NotificationCenter } from './Notifications/NotificationCenter'
 import { useNotifications } from '@/hooks/useNotifications'
-import { Menu, X } from 'lucide-react'
-import { TenantProvider } from '@/contexts/TenantContext'
-import { useRouter, usePathname } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { Menu } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 
 interface AppLayoutProps {
   children: React.ReactNode
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const router = useRouter()
   const pathname = usePathname()
+  const { user } = useAuth()
 
   const getPageTitle = () => {
     if (pathname === '/dashboard') return 'Tableau de bord'
@@ -43,25 +44,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   } = useNotifications()
 
   useEffect(() => {
-    // Simulation d'utilisateur pour développement
-    const testUser = {
-      id: 'test-user',
-      name: 'Utilisateur Test',
-      email: 'test@smartmanager.com',
-      role: 'admin',
-      tenant: {
-        id: 'test-tenant',
-        name: 'Boutique Test',
-        businessType: 'retail'
-      }
-    }
-    
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('user', JSON.stringify(testUser))
-    
     setTimeout(() => {
       setLoading(false)
-    }, 1000)
+    }, 500)
   }, [])
 
   // Close sidebar when clicking outside on mobile
@@ -88,12 +73,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <TenantProvider>
-      <div className="flex h-screen bg-linear-to-br from-gray-900 via-black to-gray-900 relative">
+    <div className="flex h-screen bg-linear-to-br from-gray-900 via-black to-gray-900 relative safe-area-inset">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -103,6 +87,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         fixed lg:static inset-y-0 left-0 z-50 
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        w-64 lg:w-72
       `}>
         <Navigation 
           user={{
@@ -124,40 +109,58 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 bg-black/40 backdrop-blur-md overflow-auto">
         {/* Mobile Header */}
-        <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-sm border-b border-white/10 p-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
+        <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-sm border-b border-white/10 safe-area-inset">
+          <div className="flex justify-between items-center px-4 py-3">
+            <div className="flex items-center space-x-3">
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                className="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-95"
+                aria-label="Menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
               {/* Logo */}
-              <img 
-                src="/logo.png" 
-                alt="SmartManager" 
-                className="h-8 w-auto object-contain"
-              />
-              <h1 className="text-white text-lg font-semibold ml-3">{getPageTitle()}</h1>
+              <div className="flex items-center space-x-2">
+                <Image 
+                  src="/logo.png" 
+                  alt="SmartManager" 
+                  width={28}
+                  height={28}
+                  className="object-contain"
+                />
+                <h1 className="text-white text-base sm:text-lg font-semibold">{getPageTitle()}</h1>
+              </div>
             </div>
-            <NotificationCenter
-              notifications={notifications}
-              onMarkAsRead={markAsRead}
-              onMarkAllAsRead={markAllAsRead}
-              onDelete={deleteNotification}
-              onClearAll={clearAll}
-            />
+            <div className="flex items-center space-x-3">
+              {/* User Info */}
+              <div className="hidden sm:flex items-center space-x-3 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+                <div className="w-8 h-8 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-sm">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'B'}
+                  </span>
+                </div>
+                <div className="hidden md:block">
+                  <p className="text-white font-medium text-sm">{user?.name || 'Bakala'}</p>
+                  <p className="text-gray-400 text-xs">{user?.email || 'devehlengoria@school.fr'}</p>
+                </div>
+              </div>
+              <NotificationCenter
+                notifications={[]}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+                onDelete={deleteNotification}
+                onClearAll={clearAll}
+              />
+            </div>
           </div>
-        </div>
+        </header>
         
         {/* Page Content */}
-        <div className="p-4">
+        <div className="p-3 sm:p-4 lg:p-6">
           {children}
         </div>
       </main>
     </div>
-    </TenantProvider>
   )
 }

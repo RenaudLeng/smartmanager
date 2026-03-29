@@ -274,11 +274,16 @@ class ApiService {
     })
   }
 
+  // Métriques système
+  async getSystemMetrics() {
+    return this.request<any>('/system/metrics')
+  }
+
   // Sauvegarde
   async createBackup(type: 'full' | 'incremental' | 'differential', tenantId?: string) {
     const endpoint = tenantId 
-      ? `/backup?type=${type}&tenantId=${tenantId}`
-      : `/backup?type=${type}`
+      ? `/system/backup?type=${type}&tenantId=${tenantId}`
+      : `/system/backup?type=${type}`
     
     return this.request<any>(endpoint, {
       method: 'POST',
@@ -291,7 +296,7 @@ class ApiService {
   }
 
   async restoreBackup(backupId: string) {
-    return this.request<any>(`/backup/${backupId}/restore`, {
+    return this.request<any>(`/system/backup/${backupId}/restore`, {
       method: 'POST',
     })
   }
@@ -299,6 +304,191 @@ class ApiService {
   // Audit Logs
   async getAuditLogs() {
     return this.request<any[]>('/audit/logs')
+  }
+
+  async createAuditLog(data: {
+    action: string
+    entity: string
+    entityId: string
+    details?: Record<string, any>
+  }) {
+    return this.request<any>('/audit/logs', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...data,
+        ipAddress: '127.0.0.1', // Pourrait être récupéré côté serveur
+      })
+    })
+  }
+
+  // Notifications
+  async getNotifications() {
+    return this.request<any[]>('/notifications')
+  }
+
+  async createNotification(data: {
+    type: string
+    title: string
+    message: string
+    priority?: string
+    data?: Record<string, any>
+  }) {
+    return this.request<any>('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async markNotificationAsRead(id: string) {
+    return this.request<any>(`/notifications/${id}/read`, {
+      method: 'PATCH'
+    })
+  }
+
+  async markAllNotificationsAsRead() {
+    return this.request<any>('/notifications/mark-all-read', {
+      method: 'PATCH'
+    })
+  }
+
+  async deleteNotification(id: string) {
+    return this.request<any>(`/notifications/${id}`, {
+      method: 'DELETE'
+    })
+  }
+
+  async clearAllNotifications() {
+    return this.request<any>('/notifications/clear-all', {
+      method: 'DELETE'
+    })
+  }
+
+  async getUserNotificationPreferences() {
+    return this.request<any>('/notifications/preferences')
+  }
+
+  async updateNotificationPreferences(preferences: any) {
+    return this.request<any>('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferences)
+    })
+  }
+
+  async getNotificationConfig() {
+    return this.request<any>('/notifications/config')
+  }
+
+  async updateNotificationConfig(config: any) {
+    return this.request<any>('/notifications/config', {
+      method: 'PUT',
+      body: JSON.stringify(config)
+    })
+  }
+
+  // Rapports globaux
+  async getGlobalReports(period: string) {
+    return this.request<any>(`/reports/global?period=${period}`)
+  }
+
+  async exportGlobalReport(period: string, reportType: string) {
+    return this.request<any>(`/reports/global/export?period=${period}&type=${reportType}`, {
+      method: 'POST'
+    })
+  }
+
+  async getTenantReports(tenantId: string, period: string) {
+    return this.request<any>(`/reports/tenant/${tenantId}?period=${period}`)
+  }
+
+  async getFinancialReports(period: string) {
+    return this.request<any>(`/reports/financial?period=${period}`)
+  }
+
+  async exportFinancialReport(period: string, format: 'excel' | 'pdf' = 'excel') {
+    return this.request<any>(`/reports/financial/export?period=${period}&format=${format}`, {
+      method: 'POST'
+    })
+  }
+
+  // Backup System
+  async getBackups() {
+    return this.request<any[]>('/backups')
+  }
+
+  async createBackup(type: 'full' | 'incremental' | 'differential', tenantId?: string) {
+    return this.request<any>('/backups', {
+      method: 'POST',
+      body: JSON.stringify({
+        type,
+        tenantId
+      })
+    })
+  }
+
+  async startBackup(jobId: string) {
+    return this.request<any>(`/backups/${jobId}/start`, {
+      method: 'POST'
+    })
+  }
+
+  async getBackupStatus(jobId: string) {
+    return this.request<any>(`/backups/${jobId}/status`)
+  }
+
+  async deleteBackup(jobId: string) {
+    return this.request<any>(`/backups/${jobId}`, {
+      method: 'DELETE'
+    })
+  }
+
+  async downloadBackup(jobId: string) {
+    return this.request<any>(`/backups/${jobId}/download`, {
+      method: 'GET'
+    })
+  }
+
+  async getBackupSettings() {
+    return this.request<any>('/backup/settings')
+  }
+
+  async updateBackupSettings(settings: any) {
+    return this.request<any>('/backup/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings)
+    })
+  }
+
+  async scheduleBackup(settings: any) {
+    return this.request<any>('/backup/schedule', {
+      method: 'POST',
+      body: JSON.stringify(settings)
+    })
+  }
+
+  // Financial Reports
+  async getFinancialReports(period: string) {
+    return this.request<any[]>(`/reports/financial?period=${period}`)
+  }
+
+  async generateFinancialReport(data: {
+    type: string
+    startDate: string
+    endDate: string
+  }) {
+    return this.request<any>('/reports/financial/generate', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async deleteFinancialReport(reportId: string) {
+    return this.request<any>(`/reports/financial/${reportId}`, {
+      method: 'DELETE'
+    })
+  }
+
+  async getFinancialReport(reportId: string) {
+    return this.request<any>(`/reports/financial/${reportId}`)
   }
 }
 

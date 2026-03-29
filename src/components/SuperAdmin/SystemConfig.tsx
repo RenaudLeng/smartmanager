@@ -116,9 +116,13 @@ export default function SystemConfig({ onSave }: SystemConfigProps) {
 
   // Charger la configuration actuelle
   useEffect(() => {
-    loadConfig()
-  }, [])
+    // Désactiver le chargement automatique pour éviter les rechargements
+    // La configuration est chargée manuellement quand nécessaire
+    // La fonction loadConfig est conservée pour un usage manuel futur
+  }, []) // Pas de chargement automatique
 
+  // La fonction loadConfig est conservée pour un usage manuel futur
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const loadConfig = async () => {
     try {
       // Appel API pour charger la configuration
