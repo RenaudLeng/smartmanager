@@ -41,7 +41,7 @@ import {
 import { useTenant } from '../../../contexts/TenantContext'
 import { useAuth } from '../../../contexts/AuthContext'
 import SmartAlerts from '../../../components/Notifications/SmartAlerts'
-import { useNotifications, useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useNotifications, useConfirmDialog } from '../../../components/ui/ConfirmDialog'
 
 interface DashboardStats {
   todaySales: number

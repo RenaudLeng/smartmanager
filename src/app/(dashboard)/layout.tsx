@@ -1,8 +1,8 @@
 'use client'
 
-import { AppLayout } from '@/components/AppLayout'
-import { TenantProvider } from '@/contexts/TenantContext'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { AppLayout } from '../../components/AppLayout'
+import { TenantProvider } from '../../contexts/TenantContext'
+import { ProtectedRoute } from '../../components/ProtectedRoute'
 
 export default function DashboardLayout({
   children,
