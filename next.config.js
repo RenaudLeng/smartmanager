@@ -8,7 +8,7 @@ const nextConfig = {
   // Configuration PostCSS explicite
   postcss: {
     plugins: {
-      tailwindcss: {},
+      '@tailwindcss/postcss': {},
       autoprefixer: {},
     },
   },
