@@ -241,3 +241,5 @@ export function TenantProvider({ children }: TenantProviderProps) {
     </TenantContext.Provider>
   )
 }
+
+export { TenantContext }
