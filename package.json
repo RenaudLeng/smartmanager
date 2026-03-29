@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "vercel-build": "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && npx prisma generate && npx prisma migrate deploy && npm run build"
+    "vercel-build": "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && DATABASE_URL=\"file:./dev.db\" npx prisma generate && DATABASE_URL=\"file:./dev.db\" npx prisma migrate deploy && npm run build"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
