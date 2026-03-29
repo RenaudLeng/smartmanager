@@ -3,6 +3,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Configuration pour résoudre les problèmes de fallback
+  trailingSlash: false,
   // Configuration minimaliste - PAS de experimental, PAS de webpack custom
   async headers() {
     return [
