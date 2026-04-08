@@ -4,7 +4,8 @@ import { verifyToken } from '@/lib/auth'
 export async function GET(request: NextRequest) {
   try {
     // Vérifier l'authentification
-    const authHeader = request.headers.get('authorization')
+    const url = new URL(request.url)
+    const authHeader = url.searchParams.get('token') || ''
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: 'Non autorisé' },

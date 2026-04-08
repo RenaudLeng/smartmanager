@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     // Vérifier si une réinitialisation est demandée
-    const resetFlag = request.headers.get('x-reset-flag') || 
-                     request.cookies.get('smartmanager-reset')?.value
+    const url = new URL(request.url)
+    const resetFlag = url.searchParams.get('reset') || 'false'
 
     if (resetFlag === 'true') {
       // Retourner des données vides après réinitialisation
