@@ -107,52 +107,16 @@ async function getStorageUsage(): Promise<number> {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Récupérer le token du header Authorization
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Non autorisé - Token manquant' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-
-    // Vérifier le token
-    let decoded: any
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as any
-    } catch (error) {
-      return NextResponse.json(
-        { success: false, error: 'Token invalide' },
-        { status: 401 }
-      )
-    }
-
-    if (!decoded || decoded.role !== 'super_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Non autorisé - SuperAdmin requis' },
-        { status: 401 }
-      )
-    }
-
+    // Métriques système (simulation pour le build statique)
     const metrics = await getSystemMetrics()
-
-    return NextResponse.json({
-      success: true,
-      data: metrics
-    })
-
+    
+    return NextResponse.json(metrics)
   } catch (error) {
-    console.error('Erreur API métriques système:', error)
+    console.error('Erreur métriques système:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Erreur lors de la récupération des métriques système' 
-      },
+      { error: 'Erreur interne du serveur' },
       { status: 500 }
     )
   }

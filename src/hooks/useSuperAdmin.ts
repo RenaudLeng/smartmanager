@@ -105,7 +105,7 @@ export default function useSuperAdmin() {
     if (user && user.role === 'super_admin') {
       loadInitialData()
     }
-  }, []) // Supprimé user pour éviter la boucle
+  }, [user?.id]) // Dépendance stable : user.id
 
   // Créer un log d'audit
   const createAuditLog = useCallback(async (data: {

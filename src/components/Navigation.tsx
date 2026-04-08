@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import Image from 'next/image'
+import { OptimizedImage } from '@/components/ui/OptimizedImage'
 import { 
   LayoutDashboard, 
   DollarSign, 
@@ -208,7 +209,7 @@ export default function Navigation({ isMobile, onCloseMobile }: NavigationProps)
       <div className="p-6 border-b border-orange-900/20">
         <div className="flex items-center space-x-3">
           {/* Logo */}
-          <Image 
+          <OptimizedImage 
             src="/logo.png" 
             alt="SmartManager" 
             width={64}

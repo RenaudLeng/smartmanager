@@ -1,24 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requireTenant } from '@/lib/auth'
-import { AuthenticatedRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
+import { monitoring } from '@/lib/monitoring'
 
 async function getHandler(request: NextRequest) {
   try {
-    const tenantId = (request as AuthenticatedRequest).user.tenantId
+    const user = (request as any).user
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'Tenant ID is required' },
-        { status: 400 }
-      )
-    }
-
-    const where: { tenantId: string } = {
-      tenantId
+    const where: any = {}
+    if (user.tenantId) {
+      where.tenantId = user.tenantId
     }
 
     const [categories, total] = await Promise.all([
@@ -52,41 +46,86 @@ async function getHandler(request: NextRequest) {
 
 async function postHandler(request: NextRequest) {
   try {
-    const { name, description } = await request.json()
-    const tenantId = (request as AuthenticatedRequest).user.tenantId
+    const user = (request as any).user
+    const body = await request.json()
+    
+    console.log('POST /api/categories - Body reçu:', body)
+    console.log('POST /api/categories - User:', user)
 
-    if (!name) {
+    const { name, description, tenantId: providedTenantId } = body
+    
+    // Valider les données de base
+    if (!name || name.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Name is required' },
+        { error: 'Le nom est requis' },
         { status: 400 }
       )
     }
 
-    if (!tenantId) {
+    // Déterminer le tenantId
+    let tenantId = providedTenantId
+    if (!tenantId && user.tenantId) {
+      tenantId = user.tenantId
+    }
+
+    // Pour les super_admin, permettre de créer sans tenant
+    if (!tenantId && user.role !== 'super_admin') {
       return NextResponse.json(
-        { error: 'Tenant ID is required' },
+        { error: 'Tenant ID requis' },
         { status: 400 }
       )
+    }
+
+    // Vérifier si la catégorie existe déjà
+    const whereCondition: any = { name: name.trim() }
+    if (tenantId) {
+      whereCondition.tenantId = tenantId
+    }
+
+    const existingCategory = await prisma.category.findFirst({
+      where: whereCondition
+    })
+
+    if (existingCategory) {
+      return NextResponse.json(
+        { error: 'Une catégorie avec ce nom existe déjà' },
+        { status: 400 }
+      )
+    }
+
+    // Créer la catégorie
+    const createData: any = {
+      name: name.trim(),
+      description: description?.trim() || null
+    }
+    
+    if (tenantId) {
+      createData.tenantId = tenantId
     }
 
     const category = await prisma.category.create({
-      data: {
-        name,
-        description,
-        tenantId
-      }
+      data: createData
+    })
+
+    console.log('Catégorie créée avec succès:', { 
+      userId: user?.id, 
+      tenantId, 
+      categoryName: name 
     })
 
     return NextResponse.json(category)
 
   } catch (error) {
-    console.error('Category creation error:', error)
+    console.error('Erreur création catégorie:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
 }
 
-export const GET = requireAuth(requireTenant(getHandler))
-export const POST = requireAuth(requireTenant(postHandler))
+export const GET = requireAuth(monitoring.middleware()(getHandler))
+export const POST = requireAuth(monitoring.middleware()(postHandler))

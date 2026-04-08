@@ -1,0 +1,260 @@
+// Monitoring avancé pour SmartManager
+import { performance } from 'perf_hooks'
+
+interface LogEntry {
+  timestamp: string
+  level: 'info' | 'warn' | 'error' | 'debug'
+  message: string
+  context?: {
+    userId?: string
+    tenantId?: string
+    route?: string
+    method?: string
+    statusCode?: number
+    duration?: number
+    error?: string
+    metadata?: Record<string, any>
+  }
+}
+
+interface MetricData {
+  name: string
+  value: number
+  timestamp: number
+  tags?: Record<string, string>
+}
+
+interface PerformanceMetrics {
+  requestCount: number
+  errorCount: number
+  averageResponseTime: number
+  memoryUsage: NodeJS.MemoryUsage
+  cpuUsage: NodeJS.CpuUsage
+}
+
+class SmartManagerMonitoring {
+  private isDevelopment = process.env.NODE_ENV === 'development'
+  private logs: LogEntry[] = []
+  private maxLogs = 1000
+  private metrics: Map<string, MetricData[]> = new Map()
+  private performanceMetrics: PerformanceMetrics = {
+    requestCount: 0,
+    errorCount: 0,
+    averageResponseTime: 0,
+    memoryUsage: process.memoryUsage(),
+    cpuUsage: process.cpuUsage()
+  }
+  private startTime: number = Date.now()
+
+  constructor() {
+    this.setupMetricsCollection()
+  }
+
+  // Configuration de la collecte de métriques
+  private setupMetricsCollection() {
+    // Collecter les métriques toutes les 30 secondes
+    setInterval(() => {
+      this.collectSystemMetrics()
+    }, 30000)
+
+    // Nettoyer les anciennes métriques toutes les 5 minutes
+    setInterval(() => {
+      this.cleanupOldMetrics()
+    }, 300000)
+  }
+
+  private createLog(level: LogEntry['level'], message: string, context?: LogEntry['context']): void {
+    const log: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      context
+    }
+
+    // Ajouter au buffer
+    this.logs.push(log)
+    
+    // Garder seulement les maxLogs derniers
+    if (this.logs.length > this.maxLogs) {
+      this.logs.shift()
+    }
+
+    // En développement, afficher dans la console
+    if (this.isDevelopment) {
+      const consoleMethod = level === 'error' ? console.error : 
+                           level === 'warn' ? console.warn : 
+                           level === 'debug' ? console.debug : console.info
+      consoleMethod(`[${level.toUpperCase()}] ${message}`, context)
+    }
+
+    // Envoyer à un service externe
+    this.sendToExternalService(log)
+  }
+    this.logs.push(log)
+    
+    // Garder seulement les maxLogs derniers
+    if (this.logs.length > this.maxLogs) {
+      this.logs = this.logs.slice(-this.maxLogs)
+    }
+
+    // En développement, afficher dans la console
+    if (this.isDevelopment) {
+      const consoleMethod = level === 'error' ? console.error : 
+                           level === 'warn' ? console.warn :
+                           level === 'debug' ? console.debug : console.log
+      
+      consoleMethod(`[${level.toUpperCase()}] ${message}`, context || '')
+    }
+  }
+
+  info(message: string, context?: LogEntry['context']): void {
+    this.createLog('info', message, context)
+  }
+
+  warn(message: string, context?: LogEntry['context']): void {
+    this.createLog('warn', message, context)
+  }
+
+  error(message: string, context?: LogEntry['context']): void {
+    this.createLog('error', message, context)
+  }
+
+  debug(message: string, context?: LogEntry['context']): void {
+    if (this.isDevelopment) {
+      this.createLog('debug', message, context)
+    }
+  }
+
+  // Logger les requêtes API
+  logApiRequest(route: string, method: string, userId?: string, tenantId?: string): void {
+    this.info(`API Request: ${method} ${route}`, {
+      userId,
+      tenantId,
+      route,
+      method
+    })
+  }
+
+  // Logger les réponses API
+  logApiResponse(route: string, method: string, statusCode: number, duration: number, userId?: string, tenantId?: string): void {
+    const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info'
+    this.createLog(level, `API Response: ${method} ${route} - ${statusCode} (${duration}ms)`, {
+      userId,
+      tenantId,
+      route,
+      method,
+      statusCode,
+      duration
+    })
+  }
+
+  // Logger les erreurs avec contexte
+  logError(error: Error, context?: LogEntry['context']): void {
+    this.createLog('error', error.message, {
+      ...context,
+      error: error.stack
+    })
+  }
+
+  // Obtenir les logs récents
+  getRecentLogs(count: number = 100): LogEntry[] {
+    return this.logs.slice(-count)
+  }
+
+  // Obtenir les logs par niveau
+  getLogsByLevel(level: LogEntry['level'], count: number = 100): LogEntry[] {
+    return this.logs
+      .filter(log => log.level === level)
+      .slice(-count)
+  }
+
+  // Obtenir les logs d'un utilisateur
+  getUserLogs(userId: string, count: number = 100): LogEntry[] {
+    return this.logs
+      .filter(log => log.context?.userId === userId)
+      .slice(-count)
+  }
+
+  // Obtenir les logs d'un tenant
+  getTenantLogs(tenantId: string, count: number = 100): LogEntry[] {
+    return this.logs
+      .filter(log => log.context?.tenantId === tenantId)
+      .slice(-count)
+  }
+
+  // Exporter les logs (pour le debugging)
+  exportLogs(): string {
+    return JSON.stringify(this.logs, null, 2)
+  }
+
+  // Vider les logs
+  clear(): void {
+    this.logs = []
+  }
+}
+
+export const logger = new Logger()
+
+// Middleware pour logger les requêtes API
+export function logApiMiddleware(
+  handler: (req: any) => Promise<Response>,
+  route: string
+) {
+  return async (req: any) => {
+    const startTime = Date.now()
+    const { method } = req
+    const user = req.user
+
+    try {
+      logger.logApiRequest(route, method, user?.id, user?.tenantId)
+      
+      const response = await handler(req)
+      
+      const duration = Date.now() - startTime
+      const statusCode = response.status || 200
+      
+      logger.logApiResponse(route, method, statusCode, duration, user?.id, user?.tenantId)
+      
+      return response
+    } catch (error) {
+      const duration = Date.now() - startTime
+      
+      logger.logError(error as Error, {
+        route,
+        method,
+        userId: user?.id,
+        tenantId: user?.tenantId,
+        duration
+      })
+      
+      throw error
+    }
+  }
+}
+
+// Fonctions utilitaires pour le monitoring
+export function createPerformanceMarker(name: string): () => void {
+  const startTime = performance.now()
+  
+  return () => {
+    const duration = performance.now() - startTime
+    logger.debug(`Performance: ${name} took ${duration.toFixed(2)}ms`)
+  }
+}
+
+export function measureAsyncFunction<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  name: string
+): T {
+  return (async (...args: Parameters<T>) => {
+    const marker = createPerformanceMarker(name)
+    try {
+      const result = await fn(...args)
+      marker()
+      return result
+    } catch (error) {
+      marker()
+      throw error
+    }
+  }) as T
+}

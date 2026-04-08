@@ -185,7 +185,7 @@ export default function useSystemMetrics() {
       const interval = setInterval(fetchSystemMetrics, 30000)
       return () => clearInterval(interval)
     }
-  }, []) // Supprimé user et token pour éviter la boucle
+  }, [user?.id, token]) // Dépendances stables : user.id et token
 
   return {
     metrics,

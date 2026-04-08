@@ -1,0 +1,763 @@
+openapi: 3.0.0
+info:
+  title: SmartManager API
+  description: API REST pour la plateforme de gestion SmartManager
+  version: 1.0.0
+  contact:
+    name: Forever Inc.
+    email: support@forever-inc.com
+    url: https://smartmanager.forever-inc.com
+  license:
+    name: Proprietary
+    url: https://smartmanager.forever-inc.com/license
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de développement
+  - url: https://smartmanager.vercel.app/api
+    description: Serveur de production
+tags:
+  - name: Authentication
+    description: Gestion de l'authentification
+  - name: Categories
+    description: Gestion des catégories
+  - name: Products
+    description: Gestion des produits
+  - name: Sales
+    description: Gestion des ventes
+  - name: Expenses
+    description: Gestion des dépenses
+  - name: Dashboard
+    description: Tableau de bord
+  - name: Users
+    description: Gestion des utilisateurs
+  - name: Tenants
+    description: Gestion des tenants
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Connexion utilisateur
+      description: Authentifier un utilisateur et obtenir un token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Inscription utilisateur
+      description: Créer un nouveau compte utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Utilisateur créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: Lister les catégories
+      security:
+        - BearerAuth
+      responses:
+        '200':
+          description: Liste des catégories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Categories
+      summary: Créer une catégorie
+      security:
+        - BearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Catégorie créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories/{id}:
+    get:
+      tags:
+        - Categories
+      summary: Obtenir une catégorie
+      security:
+        - BearerAuth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Détails de la catégorie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: Catégorie non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Categories
+      summary: Mettre à jour une catégorie
+      security:
+        - BearerAuth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Catégorie mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: Catégorie non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Categories
+      summary: Supprimer une catégorie
+      security:
+        - BearerAuth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Catégorie supprimée
+        '404':
+          description: Catégorie non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Lister les produits
+      security:
+        - BearerAuth
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des produits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductsResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Products
+      summary: Créer un produit
+      security:
+        - BearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Produit créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sales/stats:
+    get:
+      tags:
+        - Sales
+      summary: Statistiques des ventes
+      security:
+        - BearerAuth
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+            default: daily
+      responses:
+        '200':
+          description: Statistiques des ventes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /expenses:
+    get:
+      tags:
+        - Expenses
+      summary: Lister les dépenses
+      security:
+        - BearerAuth
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des dépenses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpensesResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Expenses
+      summary: Créer une dépense
+      security:
+        - BearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseRequest'
+      responses:
+        '201':
+          description: Dépense créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Statistiques du tableau de bord
+      security:
+        - BearerAuth
+      responses:
+        '200':
+          description: Statistiques du dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT d'authentification
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Message d'erreur"
+        code:
+          type: string
+          example: "ERROR_CODE"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+          example: "John Doe"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "user_123"
+        email:
+          type: string
+          example: "user@example.com"
+        name:
+          type: string
+          example: "John Doe"
+        role:
+          type: string
+          enum: [admin, manager, cashier]
+          example: "manager"
+        tenantId:
+          type: string
+          example: "tenant_123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        user:
+          $ref: '#/components/schemas/User'
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cat_123"
+        name:
+          type: string
+          example: "Boissons"
+        description:
+          type: string
+          example: "Toutes les boissons et boissons gazeuses"
+        color:
+          type: string
+          example: "#FF5733"
+        tenantId:
+          type: string
+          example: "tenant_123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Nouvelle catégorie"
+        description:
+          type: string
+          example: "Description de la nouvelle catégorie"
+        color:
+          type: string
+          example: "#FF5733"
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Catégorie mise à jour"
+        description:
+          type: string
+          example: "Description mise à jour"
+        color:
+          type: string
+          example: "#00FF00"
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "prod_123"
+        name:
+          type: string
+          example: "Coca-Cola 33cl"
+        description:
+          type: string
+          example: "Boisson gazeuse Coca-Cola"
+        price:
+          type: number
+          format: float
+          example: 500.00
+        currentStock:
+          type: integer
+          example: 100
+        minStock:
+          type: integer
+          example: 10
+        categoryId:
+          type: string
+          example: "cat_123"
+        tenantId:
+          type: string
+          example: "tenant_123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - price
+        - categoryId
+      properties:
+        name:
+          type: string
+          example: "Nouveau produit"
+        description:
+          type: string
+          example: "Description du nouveau produit"
+        price:
+          type: number
+          format: float
+          example: 1000.00
+        currentStock:
+          type: integer
+          example: 50
+        minStock:
+          type: integer
+          example: 5
+        categoryId:
+          type: string
+          example: "cat_123"
+
+    ProductsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+
+    SalesStats:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            daily:
+              type: number
+              example: 150000
+            weekly:
+              type: number
+              example: 1050000
+            monthly:
+              type: number
+              example: 4500000
+            yearly:
+              type: number
+              example: 54000000
+            totalSales:
+              type: number
+              example: 1250
+            averageSale:
+              type: number
+              format: float
+              example: 120.00
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "exp_123"
+        amount:
+          type: number
+          format: float
+          example: 5000.00
+        description:
+          type: string
+          example: "Achat de fournitures"
+        categoryId:
+          type: string
+          example: "cat_123"
+        tenantId:
+          type: string
+          example: "tenant_123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    CreateExpenseRequest:
+      type: object
+      required:
+        - amount
+        - description
+        - categoryId
+      properties:
+        amount:
+          type: number
+          format: float
+          example: 5000.00
+        description:
+          type: string
+          example: "Achat de matériel"
+        categoryId:
+          type: string
+          example: "cat_123"
+
+    ExpensesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    DashboardStats:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            totalRevenue:
+              type: number
+              example: 1500000
+            totalExpenses:
+              type: number
+              example: 450000
+            netProfit:
+              type: number
+              example: 1050000
+            totalProducts:
+              type: integer
+              example: 150
+            lowStockProducts:
+              type: integer
+              example: 12
+            todaySales:
+              type: number
+              example: 50000
+            todayExpenses:
+              type: number
+              example: 15000

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Package, Search, AlertTriangle, Plus, Edit, Trash2, TrendingUp, TrendingDown, ArrowLeft, Grid, List, X } from 'lucide-react'
 import { useFinancial } from '@/hooks/useFinancial'
 import { useOptimizedData } from '@/hooks/useOptimizedData'
+import { useCategories } from '@/hooks/useCategories'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { getCategoriesForBusinessType } from '@/config/businessCategories'
@@ -29,6 +30,17 @@ interface Product {
   image?: string
 }
 
+interface Category {
+  id: string
+  name: string
+  description?: string
+  tenantId?: string
+  tenant?: {
+    id: string
+    name: string
+  }
+}
+
 export default function StockPage() {
   const { state: financialState } = useFinancial()
   const { tenant } = useTenant()
@@ -47,7 +59,8 @@ export default function StockPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [categories, setCategories] = useState<Array<{id: string, name: string}>>([])
+  const [categoriesCreated, setCategoriesCreated] = useState(false)
+  const { categories, loading: categoriesLoading, createCategory } = useCategories()
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   
@@ -161,65 +174,9 @@ export default function StockPage() {
     [products, searchTerm, selectedCategory]
   )
 
-  // Charger les catégories depuis l'API ou créer les catégories par défaut selon le business type
-  const loadCategories = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const response = await fetch('/api/categories', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        const existingCategories = data.data || []
-        
-        // Si aucune catégorie n'existe, créer les catégories par défaut selon le business type
-        if (existingCategories.length === 0 && tenant) {
-          const defaultCategories = getCategoriesForBusinessType(tenant.businessType)
-          
-          // Créer les catégories par défaut
-          for (const category of defaultCategories) {
-            const createResponse = await fetch('/api/categories', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                name: category.name,
-                description: category.description
-              })
-            })
-            
-            if (createResponse.ok) {
-              const createdCategory = await createResponse.json()
-              existingCategories.push(createdCategory.data)
-            }
-          }
-        }
-        
-        setCategories(existingCategories)
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement des catégories:', error)
-      
-      // En cas d'erreur, utiliser les catégories par défaut selon le business type
-      if (tenant) {
-        const defaultCategories = getCategoriesForBusinessType(tenant.businessType)
-        setCategories(defaultCategories.map(cat => ({ 
-          id: `default-${cat.name}`, 
-          name: cat.name 
-        })))
-      }
-    }
-  }, [tenant])
-
-  // Charger les catégories au montage du composant et quand le tenant change
-  useEffect(() => {
-    loadCategories()
-  }, [tenant, loadCategories])
+  // DÉSACTIVÉ DÉFINITIVEMENT - La création automatique cause une boucle infinie destructrice
+// Les catégories devront être créées manuellement dans l'interface d'administration
+// Cette fonctionnalité sera réimplémentée plus tard avec une approche plus robuste
 
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.stock || !newProduct.minStock) {
@@ -269,7 +226,7 @@ export default function StockPage() {
       const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
 
       // Trouver l'ID de catégorie correspondant au nom
-      const selectedCategory = categories.find(cat => cat.name === newProduct.category)
+      const selectedCategory = categories.find((cat: Category) => cat.name === newProduct.category)
       const categoryId = selectedCategory ? selectedCategory.id : null
 
       if (!categoryId) {
@@ -671,7 +628,35 @@ export default function StockPage() {
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                         {searchTerm || selectedCategory !== 'all' 
                           ? 'Aucun produit trouvé correspondant à votre recherche' 
-                          : 'Aucun produit en stock. Ajoutez votre premier produit !'}
+                          : (
+                            <div>
+                              <p className="mb-4">Aucun produit en stock. Ajoutez votre premier produit !</p>
+                              {categories.length === 0 && tenant && (
+                                <div className="space-y-3">
+                                  <p className="text-sm text-orange-400">Aucune catégorie disponible. Créez les catégories par défaut d'abord :</p>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const defaultCategories = getCategoriesForBusinessType(tenant.businessType)
+                                        for (const category of defaultCategories) {
+                                          await createCategory({
+                                            name: category.name,
+                                            description: category.description
+                                          })
+                                        }
+                                        info('Catégories créées', 'Les catégories par défaut ont été créées avec succès')
+                                      } catch (error) {
+                                        showError('Erreur', 'Impossible de créer les catégories')
+                                      }
+                                    }}
+                                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                  >
+                                    Créer les catégories par défaut
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                       </td>
                     </tr>
                   ) : (
@@ -1029,7 +1014,7 @@ export default function StockPage() {
                     className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
                     {categories.length > 0 ? (
-                      categories.map(category => (
+                      categories.map((category: Category) => (
                         <option key={category.id} value={category.name}>{category.name}</option>
                       ))
                     ) : tenant ? (

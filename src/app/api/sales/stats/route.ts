@@ -1,11 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Vérifier si une réinitialisation est demandée
-    const resetFlag = request.headers.get('x-reset-flag') || 
-                     request.cookies.get('smartmanager-reset')?.value
-
     // Retourner toujours des données vides (pas de données codées en dur)
     const emptyStats = {
       daily: 0,
@@ -19,7 +15,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: emptyStats,
-      message: resetFlag === 'true' ? 'Données ventes réinitialisées' : 'Aucune donnée de vente'
+      message: 'Aucune donnée de vente'
     })
   } catch (error) {
     console.error('Erreur GET /api/sales/stats:', error)

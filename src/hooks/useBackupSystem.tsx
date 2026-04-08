@@ -69,11 +69,14 @@ export default function useBackupSystem({ tenants, onBackupAction }: BackupSyste
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showSchedule, setShowSchedule] = useState(false)
   const { user } = useAuth()
 
   // Charger les jobs de backup depuis l'API
   const loadBackupJobs = useCallback(async () => {
-    if (!user?.tenantId && user?.role !== 'super_admin') return
+    const currentUser = user // Capturer user à l'appel
+    if (!currentUser?.tenantId && currentUser?.role !== 'super_admin') return
 
     try {
       setLoading(true)
@@ -105,11 +108,12 @@ export default function useBackupSystem({ tenants, onBackupAction }: BackupSyste
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [])
 
   // Charger les paramètres de backup
   const loadBackupSettings = useCallback(async () => {
-    if (!user?.tenantId && user?.role !== 'super_admin') return
+    const currentUser = user // Capturer user à l'appel
+    if (!currentUser?.tenantId && currentUser?.role !== 'super_admin') return
 
     try {
       const response = await apiService.getBackupSettings()
@@ -120,12 +124,57 @@ export default function useBackupSystem({ tenants, onBackupAction }: BackupSyste
     } catch (err) {
       console.error('Erreur lors du chargement des paramètres:', err)
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
-    loadBackupJobs()
-    loadBackupSettings()
-  }, [loadBackupJobs, loadBackupSettings])
+    // Charger les données au montage et quand l'utilisateur change
+    const loadData = async () => {
+      const currentUser = user
+      if (!currentUser?.tenantId && currentUser?.role !== 'super_admin') return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Charger en parallèle
+        const [jobsResponse, settingsResponse] = await Promise.all([
+          apiService.getBackups(),
+          apiService.getBackupSettings()
+        ])
+
+        // Traiter les jobs
+        if (jobsResponse.success && jobsResponse.data) {
+          const formattedJobs = jobsResponse.data.map((job: any) => ({
+            id: job.id,
+            name: job.name,
+            description: job.description,
+            type: job.type,
+            status: job.status,
+            progress: job.progress || 0,
+            startTime: new Date(job.createdAt),
+            endTime: job.completedAt ? new Date(job.completedAt) : undefined,
+            size: job.size || 0,
+            tenantId: job.tenantId,
+            tenantName: job.tenant?.name || 'Système',
+            error: job.error
+          }))
+          setBackupJobs(formattedJobs)
+        }
+
+        // Traiter les paramètres
+        if (settingsResponse.success && settingsResponse.data) {
+          setSettings(settingsResponse.data)
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des données:', err)
+        setError('Impossible de charger les données de backup')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user?.tenantId, user?.role]) // Dépendances stables
 
   const createBackupJob = async (type: 'full' | 'incremental' | 'differential', tenantId?: string) => {
     try {

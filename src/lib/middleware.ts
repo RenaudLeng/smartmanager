@@ -15,12 +15,7 @@ const publicRoutes = [
 ]
 
 // Routes SuperAdmin qui nécessitent des permissions spécifiques
-const superAdminRoutes = [
-  '/api/tenants',
-  '/api/users',
-  '/api/admin',
-  '/superadmin'
-]
+// Gérées par les middlewares API individuellement
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -50,15 +45,7 @@ export function middleware(request: NextRequest) {
     // Vérifier et décoder le token
     const decoded = jwt.verify(token, JWT_SECRET) as any
 
-    // Vérifier les permissions SuperAdmin
-    if (superAdminRoutes.some(route => pathname.startsWith(route))) {
-      if (decoded.role !== 'super_admin') {
-        return NextResponse.json(
-          { success: false, error: 'Permissions insuffisantes' },
-          { status: 403 }
-        )
-      }
-    }
+    // Les permissions spécifiques sont gérées par les middlewares API
 
     // Ajouter les informations utilisateur à la requête
     const response = NextResponse.next()

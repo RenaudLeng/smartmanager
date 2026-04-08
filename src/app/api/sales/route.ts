@@ -1,19 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireTenant } from '@/lib/auth'
+import { validateRequest, createSaleSchema } from '@/lib/validation'
+import { monitoring } from '@/lib/monitoring'
 
 async function postHandler(request: NextRequest) {
   try {
-    const { items, totalAmount, finalAmount, paymentType, paymentStatus, clientId, notes } = await request.json()
     const tenantId = (request as any).user.tenantId
     const userId = (request as any).user.userId
 
-    if (!items || items.length === 0) {
+    // Valider les données d'entrée
+    const validation = await validateRequest(createSaleSchema)(request)
+    if (!validation.success || !validation.data) {
       return NextResponse.json(
-        { error: 'Items are required' },
+        { error: validation.error, details: validation.details },
         { status: 400 }
       )
     }
+
+    const { items, paymentMethod, discount, customerName, customerPhone } = validation.data
+    
+    // Calculer les montants à partir des items
+    const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const finalAmount = totalAmount - (totalAmount * discount / 100)
+    const paymentType = paymentMethod
+    const paymentStatus = 'completed' // Statut par défaut
 
     const sale = await prisma.$transaction(async (tx: any) => {
       const newSale = await tx.sale.create({
@@ -23,10 +34,8 @@ async function postHandler(request: NextRequest) {
           finalAmount,
           paymentType,
           paymentStatus,
-          clientId,
           userId,
-          tenantId,
-          notes
+          tenantId
         }
       })
 
@@ -35,8 +44,8 @@ async function postHandler(request: NextRequest) {
           saleId: newSale.id,
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice
+          unitPrice: item.price,
+          totalPrice: item.price * item.quantity
         }))
       })
 
@@ -180,5 +189,5 @@ async function getHandler(request: NextRequest) {
   }
 }
 
-export const POST = requireAuth(requireTenant(postHandler))
-export const GET = requireAuth(requireTenant(getHandler))
+export const POST = requireAuth(monitoring.middleware()(postHandler))
+export const GET = requireAuth(monitoring.middleware()(getHandler))

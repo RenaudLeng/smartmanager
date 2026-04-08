@@ -94,7 +94,6 @@ export function useFinancial(): UseFinancialReturn {
     error: budgetLinesResult.error || transactionsResult.error || metricsResult.error || localState.error
   }
 
-  // Helper function pour calculer les métriques
   const calculateMetrics = useCallback((
     budgetLines: BudgetLine[] = state.budgetLines,
     transactions: FinancialTransaction[] = state.transactions
@@ -107,23 +106,58 @@ export function useFinancial(): UseFinancialReturn {
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0)
 
-    const profit = totalRevenue - totalExpenses
-    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0
+    const netProfit = totalRevenue - totalExpenses
+    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
-    const budgetTotal = budgetLines.reduce((sum, line) => sum + line.amount, 0)
-    const budgetUsed = budgetLines.reduce((sum, line) => sum + line.currentAmount, 0)
-    const budgetRemaining = budgetTotal - budgetUsed
+    const availableCash = budgetLines.reduce((sum, line) => sum + line.currentAmount, 0)
+    const totalBudgetAllocated = budgetLines.reduce((sum, line) => sum + line.initialAmount, 0)
+    const totalBudgetUsed = totalBudgetAllocated - availableCash
+
+    const initialInvestment = budgetLines
+      .filter(line => line.type === 'funds' || line.type === 'investment')
+      .reduce((sum, line) => sum + line.initialAmount, 0)
+
+    const roi = initialInvestment > 0 ? (netProfit / initialInvestment) * 100 : 0
+
+    // KPIs avancés
+    const days = 30 // Période d'analyse
+    const averageDailyRevenue = totalRevenue / days
+    const averageDailyExpenses = totalExpenses / days
+    const cashBurnRate = totalExpenses / days
+    const runway = availableCash > 0 ? availableCash / cashBurnRate : 0
+
+    const totalDebt = budgetLines
+      .filter(line => line.type === 'loan')
+      .reduce((sum, line) => sum + line.currentAmount, 0)
+
+    const debtToEquityRatio = initialInvestment > 0 ? totalDebt / initialInvestment : 0
+
+    // Calcul du point mort (simplifié)
+    const totalFixedCosts = transactions
+      .filter(t => t.type === 'expense' && (t.category === 'rent' || t.category === 'salary'))
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const variableCostRatio = totalRevenue > 0 ? 
+      ((totalExpenses - totalFixedCosts) / totalRevenue) * 100 : 50
+
+    const breakEvenPoint = averageDailyExpenses > 0 ? 
+      totalFixedCosts / (1 - (variableCostRatio / 100)) : 0
 
     return {
       totalRevenue,
       totalExpenses,
-      profit,
+      netProfit,
       profitMargin,
-      budgetTotal,
-      budgetUsed,
-      budgetRemaining,
-      transactionCount: transactions.length,
-      averageTransactionValue: transactions.length > 0 ? totalRevenue / transactions.length : 0
+      availableCash,
+      totalBudgetAllocated,
+      totalBudgetUsed,
+      roi,
+      breakEvenPoint,
+      averageDailyRevenue,
+      averageDailyExpenses,
+      cashBurnRate,
+      runway,
+      debtToEquityRatio
     }
   }, [state.budgetLines, state.transactions])
 
@@ -192,6 +226,7 @@ export function useFinancial(): UseFinancialReturn {
         updatedAt: new Date().toISOString()
       }
 
+      // Appeler l'API pour persister la transaction
       const response = await fetch('/api/financial/transactions', {
         method: 'POST',
         headers: {
@@ -210,6 +245,15 @@ export function useFinancial(): UseFinancialReturn {
         transactions: [...prev.transactions, newTransaction]
       }))
 
+      // Mettre à jour le montant de la ligne budgétaire si nécessaire
+      if (transaction.source.budgetLineId) {
+        const budgetLine = state.budgetLines.find(line => line.id === transaction.source.budgetLineId)
+        if (budgetLine && transaction.type === 'expense') {
+          const updatedAmount = budgetLine.currentAmount - transaction.amount
+          updateBudgetLine(budgetLine.id, { currentAmount: Math.max(0, updatedAmount) })
+        }
+      }
+
       // Recalculer les métriques
       setLocalState(prev => ({
         ...prev,
@@ -219,7 +263,7 @@ export function useFinancial(): UseFinancialReturn {
       console.error('Erreur lors de l\'ajout de la transaction:', error)
       setLocalState(prev => ({ ...prev, error: 'Erreur lors de l\'ajout de la transaction' }))
     }
-  }, [calculateMetrics])
+  }, [state.budgetLines, calculateMetrics, updateBudgetLine])
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<FinancialTransaction>) => {
     try {
@@ -254,23 +298,28 @@ export function useFinancial(): UseFinancialReturn {
         throw new Error('Token non trouvé')
       }
 
+      const periodTransactions = state.transactions.filter(t => 
+        t.date >= period.start && t.date <= period.end
+      )
+
       const report: FinancialReport = {
         id: Date.now().toString(),
+        title: `Rapport ${type}`,
         type,
         period,
-        data: {
-          revenue: state.transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
-          expenses: state.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
-          profit: state.transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) - 
-                 state.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
-          budgetUsed: state.budgetLines.reduce((sum, line) => sum + line.currentAmount, 0),
-          budgetTotal: state.budgetLines.reduce((sum, line) => sum + line.amount, 0),
-          transactionCount: state.transactions.length
+        metrics: calculateMetrics(state.budgetLines, periodTransactions),
+        transactions: periodTransactions,
+        insights: {
+          profitability: 'Analyse en cours...',
+          cashFlow: 'Analyse en cours...',
+          recommendations: [],
+          risks: [],
+          opportunities: []
         },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: new Date().toISOString()
       }
 
+      // Appeler l'API pour persister le rapport
       const response = await fetch('/api/financial/reports', {
         method: 'POST',
         headers: {
@@ -292,7 +341,7 @@ export function useFinancial(): UseFinancialReturn {
       console.error('Erreur lors de la génération du rapport:', error)
       setLocalState(prev => ({ ...prev, error: 'Erreur lors de la génération du rapport' }))
     }
-  }, [state.transactions, state.budgetLines])
+  }, [state.transactions, state.budgetLines, calculateMetrics])
 
   const getBudgetLineById = useCallback((id: string): BudgetLine | undefined => {
     return state.budgetLines.find(line => line.id === id)
@@ -301,6 +350,35 @@ export function useFinancial(): UseFinancialReturn {
   const getTransactionsByBudgetLine = useCallback((budgetLineId: string): FinancialTransaction[] => {
     return state.transactions.filter(t => t.source.budgetLineId === budgetLineId)
   }, [state.transactions])
+
+  // Vérifier si les données ont été réinitialisées
+  const isReset = typeof window !== 'undefined' ? localStorage.getItem('smartmanager-reset') : null
+  if (isReset === 'true') {
+    console.log('Données réinitialisées - utilisation de données vides')
+    localStorage.removeItem('smartmanager-reset')
+    return {
+      state: {
+        budgetLines: [],
+        transactions: [],
+        metrics: null,
+        reports: [],
+        loading: false,
+        error: null
+      },
+      actions: {
+        createBudgetLine,
+        updateBudgetLine,
+        deleteBudgetLine,
+        addTransaction,
+        updateTransaction,
+        deleteTransaction,
+        generateReport,
+        calculateMetrics: () => setLocalState(prev => ({ ...prev, metrics: calculateMetrics(prev.budgetLines, prev.transactions) })),
+        getBudgetLineById,
+        getTransactionsByBudgetLine
+      }
+    }
+  }
 
   return {
     state,

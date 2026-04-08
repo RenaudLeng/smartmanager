@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { BUSINESS_TYPES_CONFIG } from '@/types/index'
-import { hashPassword } from '@/lib/auth'
+import { hashPassword, requireAuth, requirePermission } from '@/lib/auth'
+import { PERMISSIONS } from '@/types'
 
 // Schémas de validation
 const createTenantSchema = z.object({
@@ -39,7 +40,7 @@ const createTenantSchema = z.object({
 })
 
 // GET /api/tenants - Lister tous les tenants
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const { search, status, businessType } = Object.fromEntries(request.nextUrl.searchParams)
 
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/tenants - Créer un nouveau tenant
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json()
     console.log('Données reçues:', JSON.stringify(body, null, 2))
@@ -236,3 +237,6 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export const GET = requireAuth(requirePermission(PERMISSIONS.VIEW_ALL_TENANTS)(getHandler))
+export const POST = requireAuth(requirePermission(PERMISSIONS.CREATE_TENANT)(postHandler))

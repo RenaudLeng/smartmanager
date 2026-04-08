@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireTenant } from '@/lib/auth'
+import { validateRequest, createProductSchema, safeParseFloat, safeParseDate } from '@/lib/validation'
+import { monitoring } from '@/lib/monitoring'
 
 async function getHandler(request: NextRequest) {
   try {
-    const tenantId = (request as any).user.tenantId
+    const user = (request as any).user
+    const tenantId = user.tenantId
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
@@ -12,9 +15,13 @@ async function getHandler(request: NextRequest) {
     const categoryId = searchParams.get('categoryId')
 
     const where: any = {
-      tenantId,
       isActive: true,
       deletedAt: null
+    }
+
+    // Ajouter le filtre tenant si disponible
+    if (tenantId) {
+      where.tenantId = tenantId
     }
 
     if (search) {
@@ -46,7 +53,6 @@ async function getHandler(request: NextRequest) {
           }
         },
         orderBy: [
-          { quantity: 'asc' },
           { name: 'asc' }
         ],
         skip: (page - 1) * limit,
@@ -56,7 +62,7 @@ async function getHandler(request: NextRequest) {
     ])
 
     return NextResponse.json({
-      products,
+      data: products,
       pagination: {
         page,
         limit,
@@ -76,6 +82,18 @@ async function getHandler(request: NextRequest) {
 
 async function postHandler(request: NextRequest) {
   try {
+    const user = (request as any).user
+    const tenantId = user.tenantId
+
+    // Valider les données d'entrée
+    const validation = await validateRequest(createProductSchema)(request)
+    if (!validation.success || !validation.data) {
+      return NextResponse.json(
+        { error: validation.error, details: validation.details },
+        { status: 400 }
+      )
+    }
+
     const {
       name,
       description,
@@ -87,53 +105,73 @@ async function postHandler(request: NextRequest) {
       categoryId,
       supplierId,
       expirationDate
-    } = await request.json()
-    
-    const tenantId = (request as any).user.tenantId
+    } = validation.data
 
-    if (!name || !sellingPrice || !categoryId) {
+    // Valider que la catégorie existe (avec ou sans tenant)
+    const categoryWhere: any = { id: categoryId }
+    if (tenantId) {
+      categoryWhere.tenantId = tenantId
+    }
+
+    const categoryExists = await prisma.category.findFirst({
+      where: categoryWhere
+    })
+    
+    if (!categoryExists) {
       return NextResponse.json(
-        { error: 'Name, selling price, and category are required' },
+        { error: 'Catégorie invalide ou non trouvée' },
         { status: 400 }
       )
     }
 
+    // Valider le fournisseur si spécifié
+    let supplier = null
+    if (supplierId) {
+      supplier = await prisma.supplier.findFirst({
+        where: { 
+          id: supplierId,
+          ...(tenantId && { tenantId })
+        }
+      })
+      
+      if (!supplier) {
+        return NextResponse.json(
+          { error: 'Fournisseur invalide ou non trouvé' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Calculer automatiquement la marge et la rentabilité
-    const purchase = parseFloat(purchasePrice) || 0
-    const selling = parseFloat(sellingPrice)
+    const purchase = safeParseFloat(purchasePrice, 0)
+    const selling = safeParseFloat(sellingPrice)
     const margin = selling - purchase
     const profitability = purchase > 0 ? (margin / purchase) * 100 : 0
 
+    // Créer le produit
+    const productData: any = {
+      name,
+      description,
+      barcode: String(barcode),
+      purchasePrice: String(purchasePrice),
+      sellingPrice: String(sellingPrice),
+      margin: String(margin),
+      profitability: String(profitability),
+      quantity: String(parseInt(quantity) || 0),
+      minStock: String(parseInt(minStock) || 0),
+      categoryId: String(categoryId),
+      expirationDate: safeParseDate(expirationDate),
+      ...(tenantId && { tenantId })
+    }
+
     const product = await prisma.product.create({
-      data: {
-        name,
-        description,
-        barcode,
-        purchasePrice: purchase,
-        sellingPrice: selling,
-        margin,
-        profitability,
-        quantity: quantity || 0,
-        minStock: minStock || 0,
-        categoryId,
-        supplierId,
-        expirationDate: expirationDate ? new Date(expirationDate) : null,
-        tenantId
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true
-          }
-        },
-        supplier: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
+      data: productData
+    })
+
+    console.log('Product created successfully:', { 
+      userId: user.id, 
+      tenantId, 
+      productName: name 
     })
 
     return NextResponse.json(product)
@@ -147,5 +185,5 @@ async function postHandler(request: NextRequest) {
   }
 }
 
-export const GET = requireAuth(requireTenant(getHandler))
-export const POST = requireAuth(requireTenant(postHandler))
+export const GET = requireAuth(requireTenant(monitoring.middleware()(getHandler)))
+export const POST = requireAuth(requireTenant(monitoring.middleware()(postHandler)))

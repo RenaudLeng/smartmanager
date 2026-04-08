@@ -61,11 +61,11 @@ export function useOptimizedData<T>({
 
   useEffect(() => {
     fetchData()
-  }, [cacheKey, staleTime]) // Supprimé fetchData pour éviter la boucle
+  }, [fetchData])
 
   const refetch = useCallback(() => {
     fetchData()
-  }, [cacheKey, staleTime]) // Supprimé fetchData pour éviter la boucle
+  }, [fetchData])
 
   return { data, loading, error, refetch, lastFetch }
 }

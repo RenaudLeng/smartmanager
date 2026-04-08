@@ -1,8 +1,9 @@
-// Service Worker avancé pour SmartManager PWA - Version corrigée
+// Service Worker avancé pour SmartManager PWA
 const CACHE_NAME = 'smartmanager-v1.0.0'
 const STATIC_CACHE = 'smartmanager-static-v1.0.0'
 const DYNAMIC_CACHE = 'smartmanager-dynamic-v1.0.0'
 
+// URLs à mettre en cache statique
 const STATIC_ASSETS = [
   '/',
   '/auth/login',
@@ -26,6 +27,7 @@ const STATIC_ASSETS = [
   '/_next/static/js/'
 ]
 
+// URLs à mettre en cache dynamique
 const CACHEABLE_ROUTES = [
   '/api/categories',
   '/api/products',
@@ -36,6 +38,7 @@ const CACHEABLE_ROUTES = [
   '/api/dashboard/stats'
 ]
 
+// Installation du service worker
 self.addEventListener('install', (event) => {
   console.log('📦 Installation du Service Worker SmartManager')
   
@@ -49,6 +52,7 @@ self.addEventListener('install', (event) => {
   )
 })
 
+// Activation du service worker
 self.addEventListener('activate', (event) => {
   console.log('🚀 Activation du Service Worker SmartManager')
   
@@ -72,14 +76,17 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// Interception des requêtes
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
+  // Ignorer les requêtes non-GET
   if (request.method !== 'GET') {
     return
   }
 
+  // Stratégie Cache First pour les assets statiques
   if (isStaticAsset(url.pathname)) {
     event.respondWith(
       caches.match(request)
@@ -90,10 +97,12 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Stratégie Network First pour les APIs
   if (isAPIRoute(url.pathname)) {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          // Mettre en cache seulement les réponses réussies
           if (response.ok) {
             const responseClone = response.clone()
             caches.open(DYNAMIC_CACHE)
@@ -102,12 +111,14 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() => {
+          // En cas d'erreur, essayer le cache
           return caches.match(request)
         })
     )
     return
   }
 
+  // Stratégie Cache First pour les pages
   event.respondWith(
     caches.match(request)
       .then((response) => {
@@ -117,6 +128,7 @@ self.addEventListener('fetch', (event) => {
 
         return fetch(request)
           .then((response) => {
+            // Mettre en cache les pages HTML
             if (response.ok && isHTMLPage(request)) {
               const responseClone = response.clone()
               caches.open(CACHE_NAME)
@@ -128,6 +140,7 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
+// Synchronisation en arrière-plan
 self.addEventListener('sync', (event) => {
   console.log('🔄 Synchronisation en arrière-plan:', event.tag)
   
@@ -136,6 +149,7 @@ self.addEventListener('sync', (event) => {
   }
 })
 
+// Gestion des notifications push
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'Nouvelle notification SmartManager',
@@ -165,6 +179,7 @@ self.addEventListener('push', (event) => {
   )
 })
 
+// Gestion du clic sur notification
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
@@ -175,6 +190,7 @@ self.addEventListener('notificationclick', (event) => {
   }
 })
 
+// Fonctions utilitaires
 function isStaticAsset(pathname) {
   return pathname.includes('/_next/static/') ||
          pathname.includes('/icons/') ||
@@ -195,10 +211,13 @@ function isHTMLPage(request) {
   return accept && accept.includes('text/html')
 }
 
+// Synchronisation des données offline
 async function syncOfflineData() {
   try {
+    // Récupérer les données stockées en IndexedDB
     const offlineData = await getOfflineData()
     
+    // Synchroniser avec le serveur
     for (const data of offlineData) {
       try {
         await fetch(data.endpoint, {
@@ -210,6 +229,7 @@ async function syncOfflineData() {
           body: JSON.stringify(data.payload)
         })
         
+        // Supprimer les données synchronisées
         await removeOfflineData(data.id)
       } catch (error) {
         console.error('Erreur synchronisation:', error)
@@ -220,7 +240,9 @@ async function syncOfflineData() {
   }
 }
 
+// Fonctions IndexedDB simplifiées
 async function getOfflineData() {
+  // Implémentation avec localStorage pour simplifier
   const data = localStorage.getItem('smartmanager_offline_data')
   return data ? JSON.parse(data) : []
 }
@@ -231,8 +253,97 @@ async function removeOfflineData(id) {
   localStorage.setItem('smartmanager_offline_data', JSON.stringify(filtered))
 }
 
+// Message handling pour communication avec l'application
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }
 })
+        return self.skipWaiting();
+      })
+  );
+});
+
+// Activation du service worker
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('🗑️ Service Worker: Suppression de l\'ancien cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      console.log('✅ Service Worker: Activation terminée');
+      return self.clients.claim();
+    })
+  );
+});
+
+// Interception des requêtes
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Gérer les requêtes d'icônes
+  if (url.pathname.includes('icon-') && url.pathname.endsWith('.png')) {
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => {
+          if (response) {
+            console.log('🎯 Service Worker: Icône servie depuis le cache:', url.pathname);
+            return response;
+          }
+          
+          // Si l'icône n'est pas dans le cache, essayer de la récupérer
+          console.log('🔄 Service Worker: Récupération de l\'icône:', url.pathname);
+          return fetch(event.request).then((response) => {
+            if (response.ok) {
+              // Mettre en cache l'icône pour les futures requêtes
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseClone);
+              });
+            }
+            return response;
+          }).catch(() => {
+            // En cas d'erreur, servir une icône par défaut
+            console.log('❌ Service Worker: Icône par défaut servie');
+            return caches.match('/icon-128x128.png');
+          });
+        })
+    );
+  }
+  
+  // Gérer les autres requêtes
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          return response;
+        }
+        
+        // Pour les requêtes réseau, mettre en cache les réponses
+        return fetch(event.request).then((response) => {
+          if (response.ok && event.request.method === 'GET') {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        });
+      })
+  );
+});
+
+// Gestion des messages
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+console.log('🎯 Service Worker SmartManager initialisé');

@@ -1,24 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { requireAuth, requireTenant } from '@/lib/auth'
+import { validateRequest } from '@/lib/validation'
+import { monitoring } from '@/lib/monitoring'
 
-export async function GET(request: NextRequest) {
+// Schéma de validation pour les employés
+const createEmployeeSchema = {
+  safeParse: async (data: any) => {
+    if (!data.name || data.name.trim().length === 0) {
+      return { success: false, error: 'Le nom est requis' }
+    }
+    
+    if (!data.email || !data.email.includes('@')) {
+      return { success: false, error: 'Email invalide' }
+    }
+    
+    if (!data.role) {
+      return { success: false, error: 'Le rôle est requis' }
+    }
+    
+    return { success: true, data }
+  }
+}
+
+async function getHandler(request: NextRequest) {
   try {
-    // Vérifier si une réinitialisation est demandée
-    const resetFlag = request.headers.get('x-reset-flag') || 
-                     request.cookies.get('smartmanager-reset')?.value
+    const tenantId = (request as any).user.tenantId
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const role = searchParams.get('role')
 
-    if (resetFlag === 'true') {
-      // Retourner des données vides après réinitialisation
-      return NextResponse.json({
-        success: true,
-        data: [],
-        message: 'Données employés réinitialisées'
-      })
+    const where: any = { tenantId }
+    if (role) {
+      where.role = role
     }
 
-    // Retourner des données vides par défaut (pas de données codées en dur)
+    const [employees, total] = await Promise.all([
+      prisma.staff.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      prisma.staff.count({ where })
+    ])
+
     return NextResponse.json({
       success: true,
-      data: []
+      data: employees,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
     })
   } catch (error) {
     console.error('Error fetching employees:', error)

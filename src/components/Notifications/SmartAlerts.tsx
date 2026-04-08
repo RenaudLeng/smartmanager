@@ -49,129 +49,102 @@ export default function SmartAlerts() {
     try {
       if (!token) {
         console.log('Pas de token trouvé, utilisation de données par défaut')
-        setStockAlerts([])
-        setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
-        setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
-        setProfitMargin(0)
+        resetData()
         return
       }
       
-      // Charger les produits pour alertes de stock (avec retry)
-      let productsResponseData = { products: [] }
-      try {
-        const productsResponse = await fetch('/api/products', {
+      // Charger toutes les données en parallèle avec Promise.all pour optimiser
+      const [productsResponse, salesResponse, expensesResponse, configResponse] = await Promise.allSettled([
+        fetch('/api/products', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/sales/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/expenses/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/dashboard/config', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        if (productsResponse.ok) {
-          productsResponseData = await productsResponse.json()
-        } else {
-          console.warn('Impossible de charger les produits, statut:', productsResponse.status)
-        }
-      } catch (error) {
-        console.warn('Erreur réseau lors du chargement des produits:', error)
-      }
+      ])
       
-      // Charger les ventes pour alertes de performance (avec retry)
-      let salesResponseData = { totalSales: 0, todaySales: 0 }
-      try {
-        const salesResponse = await fetch('/api/sales/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (salesResponse.ok) {
-          salesResponseData = await salesResponse.json()
-        } else {
-          console.warn('Impossible de charger les ventes, statut:', salesResponse.status)
-        }
-      } catch (error) {
-        console.warn('Erreur réseau lors du chargement des ventes:', error)
-      }
+      // Traiter les réponses
+      const productsData = productsResponse.status === 'fulfilled' && productsResponse.value.ok 
+        ? await productsResponse.value.json() 
+        : { products: [] }
       
-      // Charger les dépenses pour alertes financières (avec retry)
-      let expensesResponseData = { totalExpenses: 0, todayExpenses: 0 }
-      try {
-        const expensesResponse = await fetch('/api/expenses/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (expensesResponse.ok) {
-          expensesResponseData = await expensesResponse.json()
-        } else {
-          console.warn('Impossible de charger les dépenses, statut:', expensesResponse.status)
-        }
-      } catch (error) {
-        console.warn('Erreur réseau lors du chargement des dépenses:', error)
-      }
+      const salesData = salesResponse.status === 'fulfilled' && salesResponse.value.ok 
+        ? await salesResponse.value.json() 
+        : { totalSales: 0, todaySales: 0 }
       
-      // Charger la configuration du tableau de bord
-      let configResponseData = { data: null }
-      try {
-        const configResponse = await fetch('/api/dashboard/config', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (configResponse.ok) {
-          configResponseData = await configResponse.json()
-        } else {
-          console.warn('Impossible de charger la configuration, statut:', configResponse.status)
-        }
-      } catch (error) {
-        console.warn('Erreur réseau lors du chargement de la configuration:', error)
-      }
+      const expensesData = expensesResponse.status === 'fulfilled' && expensesResponse.value.ok 
+        ? await expensesResponse.value.json() 
+        : { totalExpenses: 0 }
       
-      // Traiter les données
-      const products = productsResponseData.products || []
-      const lowStockProducts = products.filter((product: {
-        id: string
-        name: string
-        quantity: number
-        minStock?: number
-      }) => 
-        product.quantity <= (product.minStock || 10)
-      )
+      const configData = configResponse.status === 'fulfilled' && configResponse.value.ok 
+        ? await configResponse.value.json() 
+        : config
       
-      setStockAlerts(lowStockProducts.map((product: {
-        id: string
-        name: string
-        quantity: number
-        minStock?: number
-      }) => ({
-        id: product.id,
-        name: product.name,
-        currentStock: product.quantity,
-        minStock: product.minStock || 10,
-        status: product.quantity === 0 ? 'RUPTURE' : 
-                product.quantity <= (product.minStock || 10) / 2 ? 'CRITIQUE' : 'FAIBLE'
-      })))
-      
-      setSalesData({
-        daily: salesResponseData.todaySales || 0,
-        weekly: 0,
-        monthly: 0,
-        revenue: salesResponseData.totalSales || 0
-      })
-      
-      setExpenseData({
-        daily: expensesResponseData.todayExpenses || 0,
-        weekly: 0,
-        monthly: 0,
-        total: expensesResponseData.totalExpenses || 0
-      })
-      
-      if (configResponseData.data) {
-        setConfig(configResponseData.data)
-      }
-      
-      // Calculer la marge bénéficiaire
-      const margin = salesResponseData.totalSales ? 
-        ((salesResponseData.totalSales - expensesResponseData.totalExpenses) / salesResponseData.totalSales * 100) : 0
-      setProfitMargin(margin)
+      // Mettre à jour les états
+      updateStates(productsData, salesData, expensesData, configData)
       
     } catch (error) {
       console.warn('Erreur lors du chargement des données:', error)
-      setStockAlerts([])
-      setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
-      setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
-      setProfitMargin(0)
+      resetData()
     }
   }, [token])
+
+  const resetData = () => {
+    setStockAlerts([])
+    setSalesData({ daily: 0, weekly: 0, monthly: 0, revenue: 0 })
+    setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 })
+    setProfitMargin(0)
+  }
+
+  const updateStates = (productsData: any, salesData: any, expensesData: any, configData: Config) => {
+    // Calculer les alertes de stock
+    const alerts = productsData.products?.filter((product: any) => 
+      product.currentStock <= product.minStock && product.minStock > 0
+    ).map((product: any) => {
+      let status: StockAlert['status'] = 'FAIBLE'
+      if (product.currentStock === 0) status = 'RUPTURE'
+      else if (product.currentStock <= product.minStock * 0.5) status = 'CRITIQUE'
+      
+      return {
+        id: product.id,
+        name: product.name,
+        currentStock: product.currentStock,
+        minStock: product.minStock,
+        status
+      }
+    }) || []
+    setStockAlerts(alerts)
+    
+    // Mettre à jour les ventes
+    setSalesData({ 
+      daily: salesData.todaySales || 0, 
+      weekly: 0, 
+      monthly: salesData.totalSales || 0, 
+      revenue: salesData.totalSales || 0 
+    })
+    
+    // Mettre à jour les dépenses
+    setExpenseData({ 
+      daily: 0, 
+      weekly: 0, 
+      monthly: 0, 
+      total: expensesData.totalExpenses || 0 
+    })
+    
+    // Mettre à jour la config
+    setConfig(configData)
+    
+    // Calculer la marge bénéficiaire
+    const margin = salesData.totalSales ? 
+      ((salesData.totalSales - expensesData.totalExpenses) / salesData.totalSales * 100) : 0
+    setProfitMargin(margin)
+  }
 
   useEffect(() => {
     loadData()
@@ -235,10 +208,10 @@ export default function SmartAlerts() {
             </span>
           </div>
           <p className="text-white text-lg font-semibold mt-1">
-            {salesData.daily.toLocaleString('fr-GA')} XAF
+            {(salesData.daily || 0).toLocaleString('fr-GA')} XAF
           </p>
           <p className="text-gray-400 text-xs mt-1">
-            Objectif: {config.dailyObjective.toLocaleString('fr-GA')} XAF
+            Objectif: {(config.dailyObjective || 0).toLocaleString('fr-GA')} XAF
           </p>
         </div>
 
@@ -255,10 +228,10 @@ export default function SmartAlerts() {
             </span>
           </div>
           <p className="text-white text-lg font-semibold mt-1">
-            {expenseData.daily.toLocaleString('fr-GA')} XAF
+            {(expenseData.daily || 0).toLocaleString('fr-GA')} XAF
           </p>
           <p className="text-gray-400 text-xs mt-1">
-            Limite: {config.dailyExpenseLimit.toLocaleString('fr-GA')} XAF
+            Limite: {(config.dailyExpenseLimit || 0).toLocaleString('fr-GA')} XAF
           </p>
         </div>
 
@@ -275,10 +248,10 @@ export default function SmartAlerts() {
             </span>
           </div>
           <p className="text-white text-lg font-semibold mt-1">
-            {profitMargin.toFixed(1)}%
+            {(profitMargin || 0).toFixed(1)}%
           </p>
           <p className="text-gray-400 text-xs mt-1">
-            Minimum: {config.minProfitMargin}%
+            Minimum: {(config.minProfitMargin || 0)}%
           </p>
         </div>
       </div>
