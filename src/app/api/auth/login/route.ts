@@ -105,4 +105,6 @@ async function postHandler(request: NextRequest) {
   }
 }
 
-export const POST = requireAuth(monitoring.middleware()(postHandler))
+export async function POST(request: NextRequest) {
+  return postHandler(request)
+}

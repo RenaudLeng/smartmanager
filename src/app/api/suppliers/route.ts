@@ -176,7 +176,18 @@ async function deleteHandler(request: NextRequest) {
   }
 }
 
-export const GET = requireAuth(monitoring.middleware()(getHandler))
-export const POST = requireAuth(monitoring.middleware()(postHandler))
-export const PUT = requireAuth(monitoring.middleware()(putHandler))
-export const DELETE = requireAuth(monitoring.middleware()(deleteHandler))
+export async function GET(request: NextRequest) {
+  return getHandler(request)
+}
+
+export async function POST(request: NextRequest) {
+  return postHandler(request)
+}
+
+export async function PUT(request: NextRequest) {
+  return putHandler(request)
+}
+
+export async function DELETE(request: NextRequest) {
+  return deleteHandler(request)
+}

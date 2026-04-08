@@ -65,6 +65,10 @@ async function getHandler(request: NextRequest) {
   }
 }
 
+export async function GET(request: NextRequest) {
+  return getHandler(request)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
